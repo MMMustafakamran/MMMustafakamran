@@ -2,13 +2,11 @@
   <h1>Hi! I'm Mustafa Kamran 👋</h1>
 </p>
 
-
 <p align="center">
   <a href="https://git.io/typing-svg">
-    <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=24&pause=1000&color=00BFFF&center=true&vCenter=true&width=435&lines=Computer+Science+Student" alt="Typing SVG" />
+    <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=24&pause=1000&color=00BFFF&center=true&vCenter=true&width=435&lines=Computer+Science+Student" alt="Typing Animation" />
   </a>
 </p>
-
 ---
 
 I am a **Final Year CS Student** at FAST-NUCES in Islamabad, Pakistan, and my love for learning knows no bounds.  
