@@ -52,15 +52,3 @@ When it comes to acquiring new skills, I am like a sponge, soaking up knowledge 
   </a>
 </p>
 
----
-
-## 🌟 Featured Repo:
-<p align="center">
-  <img src="https://github-readme-stats.vercel.app/api/pin/?username=MMMustafakamran&repo=YOUR_TOP_REPO&theme=tokyonight" />
-</p>
-
----
-
-<div align="center">
-  <p>Thanks for visiting! ⭐ Feel free to check out my repositories and connect with me.</p>
-</div>
