@@ -1,4 +1,7 @@
-# Hi! I'm Mustafa Kamran 👋
+<p align="center">
+  <h1>Hi! I'm Mustafa Kamran 👋</h1>
+</p>
+
 
 <p align="center">
   <a href="https://git.io/typing-svg">
