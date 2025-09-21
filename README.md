@@ -1,12 +1,11 @@
-<p align="center">
-  <h1>Hi! I'm Mustafa Kamran 👋</h1>
-</p>
+<div align="center">
 
-<p align="center">
-  <a href="https://git.io/typing-svg">
-    <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=24&pause=1000&color=00BFFF&center=true&vCenter=true&width=435&lines=Computer+Science+Student" alt="Typing Animation" />
-  </a>
-</p>
+# Hi! I'm Mustafa Kamran 👋
+
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=24&pause=1000&color=00BFFF&center=true&vCenter=true&width=435&lines=Computer+Science+Student)](https://git.io/typing-svg)
+
+</div>
+
 ---
 
 I am a **Final Year CS Student** at FAST-NUCES in Islamabad, Pakistan, and my love for learning knows no bounds.  
@@ -27,8 +26,8 @@ When it comes to acquiring new skills, I am like a sponge, soaking up knowledge 
 </p>
 
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=MMMustafakamran&show_icons=true&theme=tokyonight" alt="GitHub Stats"/>
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=MMMustafakamran&layout=compact&theme=tokyonight" alt="Top Languages"/>
+  <img src="https://github-readme-stats.vercel.app/api?username=MMMustafakamran&show_icons=true&theme=tokyonight" alt="GitHub Stats" height="150"/>
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=MMMustafakamran&layout=compact&theme=tokyonight" alt="Top Languages" height="150"/>
 </p>
 
 ---
@@ -55,7 +54,13 @@ When it comes to acquiring new skills, I am like a sponge, soaking up knowledge 
 
 ---
 
-## 🌟 Top Contributed Repo:
+## 🌟 Featured Repo:
 <p align="center">
   <img src="https://github-readme-stats.vercel.app/api/pin/?username=MMMustafakamran&repo=YOUR_TOP_REPO&theme=tokyonight" />
 </p>
+
+---
+
+<div align="center">
+  <p>Thanks for visiting! ⭐ Feel free to check out my repositories and connect with me.</p>
+</div>
