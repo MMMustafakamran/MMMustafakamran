@@ -50,4 +50,3 @@ When it comes to acquiring new skills, I am like a sponge, soaking up knowledge 
     <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" />
   </a>
 </p>
-
