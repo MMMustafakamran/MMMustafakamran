@@ -9,12 +9,8 @@
 
 I am a **Final Year CS Student** at FAST-NUCES in Islamabad, Pakistan, and my love for learning knows no bounds.  
 As a **problem-solving enthusiast**, I am always seeking new challenges and innovative solutions.  
-With a keen interest in **real-world problems** and their intersection with **Computer Science**,  
+With a keen interest in **real-world problems** and their intersection with **Software Development**,  
 I believe the possibilities for improving the world are limitless.
-
-But that's not all – I am also a **social butterfly**, constantly looking for opportunities to **network** and **exchange ideas**.  
-When it comes to acquiring new skills, I am like a sponge, soaking up knowledge and always eager to **learn new languages and tools**.
-
 > *"If you want a motivated, versatile, and passionate team player, look no further – I am your person!"*
 
 ---
