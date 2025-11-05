@@ -16,14 +16,10 @@ I believe the possibilities for improving the world are limitless.
 ---
 
 ## 📊 Stats:
-#<p align="center">
-#  <img src="https://github-readme-streak-stats.herokuapp.com/?user=MMMustafakamran&theme=tokyonight" alt="GitHub Streak Stats"/>
-#</p>
-
-#<p align="center">
- # <img  src="https://github-readme-stats.vercel.app/api?username=MMMustafakamran&show_icons=true&theme=tokyonight" alt="GitHub Stats" height="150"/>
- # <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=MMMustafakamran&layout=compact&theme=tokyonight" alt="Top Languages" height="150"/>
-#</p>
+<p align="center">
+  <img  src="https://github-readme-stats.vercel.app/api?username=MMMustafakamran&show_icons=true&theme=tokyonight" alt="GitHub Stats" height="150"/>
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=MMMustafakamran&layout=compact&theme=tokyonight" alt="Top Languages" height="150"/>
+</p>
 
 ---
 
