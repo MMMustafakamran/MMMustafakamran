@@ -75,20 +75,6 @@ class MustafaKamran:
 
 ---
 
-## 📌 Featured Projects
-
-> 💡 *Pinned repositories below — or check them out directly on my profile.*
-
-| Project | Description | Stack |
-|--------|-------------|-------|
-| 🔗 **[Project Name]** | Brief one-line description of what it does | `LangChain` `FastAPI` `React` |
-| 🔗 **[Project Name]** | Brief one-line description of what it does | `OpenAI` `Next.js` `PostgreSQL` |
-| 🔗 **[Project Name]** | Brief one-line description of what it does | `HuggingFace` `Docker` `AWS` |
-
-*← Replace with your actual projects!*
-
----
-
 ## 📊 GitHub Stats
 
 <p align="center">
