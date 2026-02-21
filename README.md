@@ -86,23 +86,7 @@ class MustafaKamran:
   <img src="https://streak-stats.demolab.com?user=MMMustafakamran&theme=tokyonight&hide_border=true&background=0D1117&ring=6EE7F7&fire=6EE7F7&currStreakLabel=6EE7F7" height="165"/>
 </p>
 
----
 
-## 🏆 GitHub Trophies
-
-<p align="center">
-  <img src="https://github-profile-trophy.vercel.app/?username=MMMustafakamran&theme=algolia&no-frame=true&row=1&column=7" width="100%"/>
-</p>
-
----
-
-## 📈 Activity Graph
-
-<p align="center">
-  <img src="https://github-readme-activity-graph.vercel.app/graph?username=MMMustafakamran&bg_color=0D1117&color=6EE7F7&line=6EE7F7&point=ffffff&area=true&hide_border=true" width="100%"/>
-</p>
-
----
 
 <div align="center">
 
