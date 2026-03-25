@@ -82,9 +82,7 @@ class MustafaKamran:
   <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=MMMustafakamran&layout=compact&theme=tokyonight&hide_border=true&bg_color=0D1117&title_color=6EE7F7&text_color=ffffff" height="165"/>
 </p>
 
-<p align="center">
-  <img src="https://streak-stats.demolab.com?user=MMMustafakamran&theme=tokyonight&hide_border=true&background=0D1117&ring=6EE7F7&fire=6EE7F7&currStreakLabel=6EE7F7" height="165"/>
-</p>
+
 
 
 
