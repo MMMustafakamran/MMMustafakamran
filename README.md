@@ -66,21 +66,7 @@ $ ls ./skills --tree
 
 ---
 
-```bash
-$ ./run --project featured
-```
 
-<div align="center">
-
-| Project | Description | Stack |
-|---|---|---|
-| 🚀 **Project One** | _Add a one-line description_ | `React` `Node` `AWS` |
-| 🤖 **Project Two** | _Add a one-line description_ | `Python` `PyTorch` `Docker` |
-| ☁️ **Project Three** | _Add a one-line description_ | `Next.js` `Kubernetes` `GCP` |
-
-</div>
-
----
 
 ```bash
 $ curl stats.github.com/mustafakamran
