@@ -15,6 +15,11 @@
 
 <br>
 
+<h3><code>mustafa@github ~ $ ls ~/projects</code></h3>
+<a href="https://github.com/MMMustafakamran?tab=repositories"><img src="./projects.svg" width="860" alt="Recently active repositories" /></a>
+
+<br><br>
+
 <h3><code>mustafa@github ~ $ ./links.sh</code></h3>
 
 <b>Fullstack Developer · AI Engineer · Cloud Architect</b>

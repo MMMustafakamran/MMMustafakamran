@@ -22,7 +22,10 @@ jobs:
       - run: python scripts/fetch_contributions.py
       - run: python scripts/render_heatmap_svg.py
       - run: python scripts/render_stats_svg.py
+      - run: python scripts/render_projects_svg.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: refresh contribution graph [skip ci]"
-          file_pattern: "data/contributions.json contrib-heatmap.svg stats-card.svg"
+          commit_message: "chore: refresh profile art [skip ci]"
+          file_pattern: "data/contributions.json data/repos.json contrib-heatmap.svg stats-card.svg projects.svg"

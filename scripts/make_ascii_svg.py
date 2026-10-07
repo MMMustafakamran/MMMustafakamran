@@ -43,7 +43,23 @@ ROW_DELAY = 0.04  # seconds between row starts
 ROW_DUR = 0.35  # seconds for one row's wipe
 START = 0.2
 PROMPT_CW = 7.2  # character width of the 12px footer prompt
-TYPE_DUR = 1.2  # seconds to type the footer prompt
+TYPE_CPS = 14  # footer typing speed, characters per second
+HOLD = 2.8  # seconds each footer command's output stays up
+
+# Footer commands, cycled forever: (command, output). Edit freely.
+FOOTER = [
+    ("whoami", "Mustafa Kamran"),
+    ("cat now.txt", "building agentic AI apps"),
+    ("echo $STACK", "TypeScript · React · Python · AWS"),
+    ("uptime", "shipping code since 2022"),
+    ("echo $COFFEE", "∞"),
+]
+
+# Boxes in source-image pixels (x0, y0, x1, y1), mapped onto the character grid.
+EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
+LENSES = [(330, 410, 465, 525), (495, 405, 640, 522)]
+BLINK_EVERY = 4.6  # seconds between blinks
+GLINT_EVERY = 7.0  # seconds between lens glints
 
 STATIC = os.environ.get("STATIC") == "1"
 
@@ -60,7 +76,7 @@ def dark_pool(arr: np.ndarray, cols: int, rows: int) -> np.ndarray:
     return out
 
 
-def load_grid() -> list[str]:
+def load_grid() -> tuple[list[str], callable]:
     img = Image.open(SRC).convert("L")
     arr = np.asarray(img, dtype=np.float32)
     subject = arr < 250  # the prep step composited the background to pure white
@@ -97,11 +113,20 @@ def load_grid() -> list[str]:
         idx = ((255.0 - small) / 256.0 * len(RAMP)).astype(int).clip(0, len(RAMP) - 1)
     lines = ["".join(RAMP[i] for i in row) for row in idx]
     # Trim blank rows top and bottom so the portrait sits snug in its frame.
+    top = 0
     while lines and not lines[0].strip():
         lines.pop(0)
+        top += 1
     while lines and not lines[-1].strip():
         lines.pop()
-    return lines
+
+    def to_cell(x: float, y: float) -> tuple[int, int]:
+        """Source-image pixel -> (col, row) in the trimmed grid."""
+        col = (x - x0) / (x1 - x0) * COLS
+        row = (y - y0) / (y1 - y0) * rows - top
+        return round(col), round(row)
+
+    return lines, to_cell
 
 
 def esc(s: str) -> str:
@@ -132,7 +157,148 @@ def shade(line: str) -> str:
     )
 
 
-def build(lines: list[str]) -> str:
+def discrete(events: list[tuple[float, float]], cycle: float) -> tuple[str, str]:
+    """(time, value) steps within one cycle -> SMIL values/keyTimes for calcMode=discrete."""
+    steps: dict[float, float] = {}
+    for t, v in events:
+        steps[round(min(max(t / cycle, 0), 1), 4)] = v
+    steps.setdefault(0.0, events[0][1])
+    keys = sorted(steps)
+    return ";".join(f"{steps[k]:g}" for k in keys), ";".join(f"{k:g}" for k in keys)
+
+
+def footer(w: float, foot_y: float, done: float, font: str) -> list[str]:
+    """Prompt line that types a command, prints its output, clears, and moves to the next."""
+    out = [f'<line x1="{PAD / 2:g}" y1="{foot_y:g}" x2="{w - PAD / 2:g}" y2="{foot_y:g}" stroke="{BORDER}"/>']
+    py = foot_y + FOOT_H / 2 + 4
+    user, host = USER_HOST.split("@")
+    prompt = f"{USER_HOST}:~$ "
+    px = PAD + len(prompt) * PROMPT_CW
+    out.append(
+        f'<text x="{PAD}" y="{py:g}" font-family="{font}" font-size="12" '
+        f'textLength="{len(prompt.rstrip()) * PROMPT_CW:g}" lengthAdjust="spacingAndGlyphs">'
+        f'<tspan fill="{ACCENT}">{user}@{host}</tspan><tspan fill="{MUTED}">:~$</tspan></text>'
+    )
+
+    # Timeline of one full cycle through FOOTER.
+    items, t = [], 0.0
+    for cmd, result in FOOTER:
+        typed = len(cmd) / TYPE_CPS
+        items.append((t, cmd, result, typed))
+        t += typed + 0.35 + HOLD + 0.3
+    cycle = t
+
+    cursor = [(0.0, 0.0)]
+    for i, (t0, cmd, result, typed) in enumerate(items):
+        width = len(f"{cmd} {result}") * PROMPT_CW
+        shown = [(0.0, 0.0)]
+        for k in range(len(cmd) + 1):
+            shown.append((t0 + k / TYPE_CPS, k * PROMPT_CW))
+        shown.append((t0 + typed + 0.35, width))
+        shown.append((t0 + typed + 0.35 + HOLD, 0.0))
+        cursor += shown[1:]
+        attrs = ""
+        if not STATIC:
+            vals, keys = discrete(shown, cycle)
+            out.append(
+                f'<clipPath id="f{i}"><rect x="{px:g}" y="{foot_y:g}" width="0" height="{FOOT_H:g}">'
+                f'<animate attributeName="width" values="{vals}" keyTimes="{keys}" calcMode="discrete" '
+                f'dur="{cycle:.2f}s" begin="{done:.2f}s" repeatCount="indefinite"/></rect></clipPath>'
+            )
+            attrs = f' clip-path="url(#f{i})"'
+        elif i:
+            continue  # the static frame shows only the first command
+        out.append(
+            f'<text x="{px:g}" y="{py:g}" font-family="{font}" font-size="12" fill="{FG}" '
+            f'textLength="{width:g}" lengthAdjust="spacingAndGlyphs"{attrs}>{esc(cmd)} '
+            f'<tspan fill="#ffffff" font-weight="700">{esc(result)}</tspan></text>'
+        )
+
+    # Block cursor follows the typing and blinks the whole time.
+    first = len(f"{FOOTER[0][0]} {FOOTER[0][1]}") * PROMPT_CW
+    cx = px + 2
+    anim = ""
+    if STATIC:
+        cx += first
+    else:
+        vals, keys = discrete(cursor, cycle)
+        xs = ";".join(f"{float(v) + cx:g}" for v in vals.split(";"))
+        anim = (
+            f'<set attributeName="opacity" to="1" begin="{done:.2f}s"/>'
+            f'<animate attributeName="x" values="{xs}" keyTimes="{keys}" calcMode="discrete" '
+            f'dur="{cycle:.2f}s" begin="{done:.2f}s" repeatCount="indefinite"/>'
+            f'<animate attributeName="fill-opacity" values="1;1;0;0" keyTimes="0;.5;.5;1" dur="1.1s" '
+            f'begin="{done:.2f}s" repeatCount="indefinite"/>'
+        )
+    hidden = "" if STATIC else ' opacity="0"'
+    out.append(f'<rect x="{cx:g}" y="{py - 11:g}" width="7.5" height="14" fill="{FG}"{hidden}>{anim}</rect>')
+    return out
+
+
+def face_fx(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
+    """Looping blink (eyes swap to closed lids) and a light glint sweeping across the lenses."""
+    if STATIC:
+        return []
+    out = [
+        "<defs>",
+        '<linearGradient id="glint" x1="0" x2="1" y1="0" y2="0">'
+        '<stop offset="0" stop-color="#fff" stop-opacity="0"/>'
+        '<stop offset=".5" stop-color="#fff" stop-opacity=".3"/>'
+        '<stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>',
+    ]
+    boxes = []
+    for i, (bx0, by0, bx1, by1) in enumerate(LENSES):
+        c0, r0 = to_cell(bx0, by0)
+        c1, r1 = to_cell(bx1, by1)
+        x, y = PAD + c0 * CHAR_W, art_y + r0 * LINE_H
+        bw, bh = (c1 - c0) * CHAR_W, (r1 - r0) * LINE_H
+        boxes.append((x, y, bw, bh))
+        out.append(f'<clipPath id="lens{i}"><rect x="{x:g}" y="{y:g}" width="{bw:g}" height="{bh:g}" rx="6"/></clipPath>')
+    out.append("</defs>")
+
+    # Glint: a slanted band of light crosses the left lens, then the right one.
+    band = 18
+    sweep = 0.55 / GLINT_EVERY
+    for i, (x, y, bw, bh) in enumerate(boxes):
+        start = done + 1.5 + i * 0.35
+        travel = bw + band + bh
+        out.append(
+            f'<g clip-path="url(#lens{i})"><g transform="translate({x - band - bh:g} 0)">'
+            f'<polygon points="{bh:g},{y:g} {bh + band:g},{y:g} {band:g},{y + bh:g} 0,{y + bh:g}" fill="url(#glint)">'
+            f'<animateTransform attributeName="transform" type="translate" '
+            f'values="0 0;0 0;{travel:g} 0;{travel:g} 0" keyTimes="0;{1 - sweep - .01:.3f};.99;1" '
+            f'dur="{GLINT_EVERY}s" begin="{start:.2f}s" repeatCount="indefinite"/></polygon></g></g>'
+        )
+
+    # Blink: cover each eye with skin-toned glyphs and a lid line for ~150 ms.
+    font = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace"
+    on = 0.15 / BLINK_EVERY
+    for bx0, by0, bx1, by1 in EYES:
+        c0, r0 = to_cell(bx0, by0)
+        c1, r1 = to_cell(bx1, by1)
+        r0, r1 = max(r0, 0), min(r1, len(lines))
+        ring = [lines[r][c] for r in (r0 - 1, r1) if 0 <= r < len(lines) for c in range(c0, c1)]
+        skin = max(set(ring) - {" "}, key=ring.count, default=":")
+        n = c1 - c0
+        rows = []
+        for r in range(r0, r1):
+            text = ("-" + "=" * (n - 2) + "-") if r == (r0 + r1) // 2 else skin * n
+            y = art_y + r * LINE_H + LINE_H * 0.8
+            rows.append(
+                f'<text x="{PAD + c0 * CHAR_W:g}" y="{y:g}" textLength="{n * CHAR_W:g}" '
+                f'lengthAdjust="spacingAndGlyphs">{shade(text)}</text>'
+            )
+        out.append(
+            f'<g opacity="0" font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}">'
+            f'<rect x="{PAD + c0 * CHAR_W:g}" y="{art_y + r0 * LINE_H:g}" width="{n * CHAR_W:g}" '
+            f'height="{(r1 - r0) * LINE_H:g}" fill="{BG}"/>{"".join(rows)}'
+            f'<animate attributeName="opacity" values="0;1;0" keyTimes="0;{1 - on:.3f};1" calcMode="discrete" '
+            f'dur="{BLINK_EVERY}s" begin="{done + 0.8:.2f}s" repeatCount="indefinite"/></g>'
+        )
+    return out
+
+
+def build(lines: list[str], to_cell) -> str:
     text_w = COLS * CHAR_W
     w = text_w + 2 * PAD
     art_y = TITLE_H + PAD
@@ -140,7 +306,6 @@ def build(lines: list[str]) -> str:
     h = foot_y + FOOT_H
     done = START + (len(lines) - 1) * ROW_DELAY + ROW_DUR  # when the portrait finishes
     font = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace"
-    prompt_text = f"{USER_HOST}:~$ whoami {NAME}"
 
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:g}" height="{h:g}" viewBox="0 0 {w:g} {h:g}">',
@@ -166,13 +331,6 @@ def build(lines: list[str]) -> str:
                 f'<animate attributeName="width" from="0" to="{text_w:g}" begin="{begin:.3f}s" '
                 f'dur="{ROW_DUR}s" fill="freeze"/></rect></clipPath>'
             )
-        # Reveal the prompt one character at a time.
-        steps = ";".join(f"{k * PROMPT_CW:g}" for k in range(len(prompt_text) + 1))
-        out.append(
-            f'<clipPath id="prompt"><rect x="{PAD}" y="{foot_y:g}" width="0" height="{FOOT_H:g}">'
-            f'<animate attributeName="width" values="{steps}" calcMode="discrete" begin="{done:.2f}s" '
-            f'dur="{TYPE_DUR}s" fill="freeze"/></rect></clipPath>'
-        )
         out.append("</defs>")
 
     out.append(f'<g font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}">')
@@ -199,36 +357,16 @@ def build(lines: list[str]) -> str:
             )
         out.append("</g>")
 
-    # Footer prompt: types "whoami <name>" once the portrait is done, then a cursor blinks forever.
-    out.append(f'<line x1="{PAD / 2:g}" y1="{foot_y:g}" x2="{w - PAD / 2:g}" y2="{foot_y:g}" stroke="{BORDER}"/>')
-    py = foot_y + FOOT_H / 2 + 4
-    user, host = USER_HOST.split("@")
-    prompt = (
-        f'<tspan fill="{ACCENT}">{user}@{host}</tspan><tspan fill="{MUTED}">:~$ </tspan>'
-        f'<tspan fill="{FG}">whoami </tspan><tspan fill="#ffffff" font-weight="700">{esc(NAME)}</tspan>'
-    )
-    clip = "" if STATIC else ' clip-path="url(#prompt)"'
-    out.append(
-        f'<text x="{PAD}" y="{py:g}" font-family="{font}" font-size="12" fill="{FG}" '
-        f'textLength="{len(prompt_text) * PROMPT_CW:g}" lengthAdjust="spacingAndGlyphs"{clip}>{prompt}</text>'
-    )
-    cx = PAD + (len(prompt_text) + 1) * PROMPT_CW
-    typed = done + TYPE_DUR
-    blink = "" if STATIC else (
-        f'<animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.5;.5;1" dur="1.1s" '
-        f'begin="{typed:.2f}s" repeatCount="indefinite"/>'
-    )
-    hidden = "" if STATIC else ' opacity="0"'
-    show = "" if STATIC else f'<set attributeName="opacity" to="1" begin="{typed:.2f}s"/>'
-    out.append(f'<rect x="{cx:g}" y="{py - 11:g}" width="7.5" height="14" fill="{FG}"{hidden}>{show}{blink}</rect>')
+    out += face_fx(lines, to_cell, art_y, done)
+    out += footer(w, foot_y, done, font)
 
     out.append("</svg>")
     return "\n".join(out)
 
 
 def main() -> None:
-    lines = load_grid()
-    OUT.write_text(build(lines), encoding="utf-8")
+    lines, to_cell = load_grid()
+    OUT.write_text(build(lines, to_cell), encoding="utf-8")
     print(f"wrote {OUT.name} ({COLS}x{len(lines)} chars)")
 
 
