@@ -18,7 +18,7 @@ text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',mo
 <text x="324" y="19.0" text-anchor="middle" style="font-size:11px;fill:#8b949e">mustafa@github: ~ ./stats.sh</text>
 <g class="t" style="animation-delay:0.30s"><rect x="20" y="50" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="38" y="77" class="lbl">$ current streak</text><circle class="live" cx="299" cy="72" r="4.5" fill="#39d353"/><text x="38" y="120" class="num hot">4</text><text x="68.8" y="120" class="unit">days</text><text x="38" y="144" class="sub">Oct 4 – Oct 7</text></g>
 <g class="t" style="animation-delay:0.42s"><rect x="331" y="50" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="349" y="77" class="lbl">$ longest streak</text><text x="349" y="120" class="num">11</text><text x="402.6" y="120" class="unit">days</text><text x="349" y="144" class="sub">Aug 11 – Aug 21</text></g>
-<g class="t" style="animation-delay:0.54s"><rect x="20" y="176" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="38" y="203" class="lbl">$ contributions</text><text x="38" y="246" class="num">2,033</text><text x="38" y="270" class="sub">in the last year</text></g>
+<g class="t" style="animation-delay:0.54s"><rect x="20" y="176" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="38" y="203" class="lbl">$ contributions</text><text x="38" y="246" class="num">2,034</text><text x="38" y="270" class="sub">in the last year</text></g>
 <g class="t" style="animation-delay:0.66s"><rect x="331" y="176" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="349" y="203" class="lbl">$ active days</text><text x="349" y="246" class="num">141</text><text x="425.4" y="246" class="unit">/ 368</text><text x="349" y="270" class="sub">38% of the year</text></g>
 <g class="t" style="animation-delay:0.78s"><rect x="20" y="302" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="38" y="329" class="lbl">$ best day</text><text x="38" y="372" class="num">140</text><text x="38" y="396" class="sub">Sep 12</text></g>
 <g class="t" style="animation-delay:0.90s"><rect x="331" y="302" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="349" y="329" class="lbl">$ avg / active day</text><text x="349" y="372" class="num">14.4</text><text x="349" y="396" class="sub">contributions</text></g>
@@ -48,6 +48,6 @@ text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',mo
 <rect class="b" style="animation-delay:1.69s" x="530.4" y="498.0" width="27.3" height="256.4" rx="2" fill="#69f0a0"><title>2026-09: 860</title></rect>
 <g class="t" style="animation-delay:1.38s"><text x="544.0" y="490.0" text-anchor="middle" style="font-size:12px;font-weight:700">860</text></g>
 <text x="544.0" y="776.4" text-anchor="middle" class="ax">S</text>
-<rect class="b" style="animation-delay:1.74s" x="574.4" y="737.4" width="27.3" height="17.0" rx="2" fill="#26a641"><title>2026-10: 57</title></rect>
+<rect class="b" style="animation-delay:1.74s" x="574.4" y="737.1" width="27.3" height="17.3" rx="2" fill="#26a641"><title>2026-10: 58</title></rect>
 <text x="588.0" y="776.4" text-anchor="middle" class="ax">O</text>
 </svg>
