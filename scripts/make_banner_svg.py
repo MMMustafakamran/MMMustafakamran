@@ -1,5 +1,5 @@
-"""Boot-up banner: a fake boot log types in, then your name prints in big block letters
-with a green shimmer sweeping across it on repeat.
+"""Banner: your name prints in big block letters with a green shimmer sweeping across it
+on repeat, then a tagline types out underneath.
 
 The block letters come from scripts/name-art.txt (figlet "ANSI Shadow" output), drawn as
 shapes rather than text so they look identical in every browser. To change the text:
@@ -8,13 +8,11 @@ shapes rather than text so they look identical in every browser. To change the t
 Usage: python scripts/make_banner_svg.py           # writes banner.svg
        STATIC=1 python scripts/make_banner_svg.py  # frozen frame, no animation
 """
-import json
 import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ART = Path(__file__).with_name("name-art.txt")
-DATA = ROOT / "data" / "contributions.json"
 OUT = ROOT / "banner.svg"
 
 USER_HOST = "mustafa@github"
@@ -37,25 +35,10 @@ BLOCK = "#26a641"
 SHADOW = "#0e4429"
 SHINE = "#d2ffe4"
 
-BOOT_STEP = 0.42  # seconds between boot lines
 SHIMMER_EVERY = 3.8  # seconds per shimmer pass over the name
 TYPE_CPS = 24
 STATIC = os.environ.get("STATIC") == "1"
 FONT = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace"
-
-
-def boot_lines() -> list[str]:
-    try:
-        total = json.loads(DATA.read_text(encoding="utf-8"))["stats"]["total"]
-        contrib = f"indexing {total:,} contributions"
-    except (OSError, KeyError, ValueError):
-        contrib = "indexing contributions"
-    return [
-        "mounting /home/mustafa",
-        "loading ai-stack: python, torch, llms",
-        contrib,
-        "starting coffee.service",
-    ]
 
 
 def esc(s: str) -> str:
@@ -98,17 +81,15 @@ def art_shapes(art: list[str], x0: float, y0: float, cw: float, ch: float) -> tu
 
 def build() -> str:
     art = [l.rstrip("\n") for l in ART.read_text(encoding="utf-8").splitlines() if l.strip()]
-    boot = boot_lines()
     cols = max(map(len, art))
     cw = (W - 2 * PAD) / cols
     ch = cw * 2.0
 
-    boot_y = TITLE_H + PAD
-    art_y = boot_y + len(boot) * LINE_H + 16
+    art_y = TITLE_H + PAD + 4
     tag_y = art_y + len(art) * ch + 30
     h = round(tag_y + PAD - 2)
 
-    t_art = 0.3 + len(boot) * BOOT_STEP + 0.25
+    t_art = 0.3
     t_tag = t_art + 1.0
 
     out = [
@@ -125,7 +106,7 @@ def build() -> str:
         out.append(f'<circle cx="{18 + i * 16}" cy="{TITLE_H / 2}" r="5" fill="{c}"/>')
     out.append(
         f'<text x="{W / 2}" y="{TITLE_H / 2 + 4}" text-anchor="middle" class="m" style="font-size:11px">'
-        f"{USER_HOST}: ~ boot</text>"
+        f"{USER_HOST}: ~</text>"
     )
 
     def show(t: float) -> tuple[str, str]:
@@ -136,30 +117,6 @@ def build() -> str:
 
     def hide(t: float) -> str:
         return "" if STATIC else f'<set attributeName="opacity" to="0" begin="{t:.2f}s"/>'
-
-    # Boot log: "[ .... ]" spins up, then flips to "[  OK  ]" with a "done".
-    width_chars = 64
-    for i, text in enumerate(boot):
-        t = 0.3 + i * BOOT_STEP
-        y = boot_y + i * LINE_H + FONT_SIZE
-        dots = " " + "." * max(width_chars - len(text) - 1, 3) + " "
-        status_w = f'textLength="{8 * CW:g}" lengthAdjust="spacingAndGlyphs"'
-        a, s = show(t)
-        out.append(
-            f'<g{a}>{s}<text x="{PAD + 9 * CW:g}" y="{y}" textLength="{(len(text) + len(dots)) * CW:g}" '
-            f'lengthAdjust="spacingAndGlyphs">{esc(text)}<tspan class="m">{dots}</tspan></text></g>'
-        )
-        if not STATIC:
-            out.append(
-                f'<text x="{PAD}" y="{y}" class="m" {status_w} opacity="0">[ <tspan class="a">....</tspan> ]'
-                f'<set attributeName="opacity" to="1" begin="{t:.2f}s" dur="{BOOT_STEP * .7:.2f}s"/></text>'
-            )
-        a, s = show(t + BOOT_STEP * .7)
-        out.append(
-            f'<g{a}>{s}<text x="{PAD}" y="{y}" {status_w}>'
-            f'<tspan class="m">[</tspan><tspan class="ok">  OK  </tspan><tspan class="m">]</tspan></text>'
-            f'<text x="{PAD + (9 + len(text) + len(dots)) * CW:g}" y="{y}" class="a">done</text></g>'
-        )
 
     # Name in block letters, wiped in left to right, then a shimmer sweeps across on repeat.
     blocks, shadow = art_shapes(art, PAD, art_y, cw, ch)
