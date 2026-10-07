@@ -31,70 +31,9 @@ FOOT = 40
 
 CELL_DELAY = 0.018  # seconds per diagonal step
 START = 0.2
-SWEEP_EVERY = 9.0  # seconds between radar sweeps
-SWEEP_DUR = 2.6  # seconds for one sweep across the grid
 STATIC = os.environ.get("STATIC") == "1"
 
 MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
-
-
-def radar(cells, grid_x, grid_y, pitch, size, ncols, begin) -> list[str]:
-    """Looping scan line that lights up the cells it passes, plus a pulsing ring on today."""
-    grid_w = ncols * pitch - GAP
-    grid_h = 7 * pitch - GAP
-    band = 70
-    frac = SWEEP_DUR / SWEEP_EVERY
-    out = [
-        "<defs>",
-        '<linearGradient id="sweep" x1="0" x2="1" y1="0" y2="0">'
-        f'<stop offset="0" stop-color="{PALETTE[5]}" stop-opacity="0"/>'
-        f'<stop offset=".85" stop-color="{PALETTE[5]}" stop-opacity=".55"/>'
-        f'<stop offset="1" stop-color="{PALETTE[5]}" stop-opacity="0"/></linearGradient>',
-        # The glow only shows through the cells, so the gaps stay dark.
-        '<clipPath id="cells">'
-        + "".join(
-            f'<rect x="{grid_x + c * pitch:.1f}" y="{grid_y + r * pitch:.1f}" width="{size:.1f}" '
-            f'height="{size:.1f}" rx="2.5"/>'
-            for c, r, _, _ in cells
-        )
-        + "</clipPath>",
-        "</defs>",
-    ]
-    timing = (
-        f'keyTimes="0;{frac:.3f};1" dur="{SWEEP_EVERY}s" begin="{begin + 0.4:.2f}s" repeatCount="indefinite"'
-    )
-    x0, x1 = grid_x - band, grid_x + grid_w + 4
-    out.append(
-        f'<rect clip-path="url(#cells)" x="0" y="{grid_y}" width="{band}" height="{grid_h:.1f}" fill="url(#sweep)">'
-        f'<animate attributeName="x" values="{x0:.1f};{x1:.1f};{x1:.1f}" {timing}/></rect>'
-    )
-    out.append(
-        f'<rect x="0" y="{grid_y - 4}" width="1.5" height="{grid_h + 8:.1f}" fill="{ACCENT}" opacity=".8">'
-        f'<animate attributeName="x" values="{x0 + band:.1f};{x1 + band:.1f};{x1 + band:.1f}" {timing}/>'
-        f'<animate attributeName="opacity" values=".8;.8;0" keyTimes="0;{frac:.3f};{frac + .001:.3f}" '
-        f'calcMode="discrete" dur="{SWEEP_EVERY}s" begin="{begin + 0.4:.2f}s" repeatCount="indefinite"/></rect>'
-    )
-
-    # Today's cell: an expanding ring that fades out, on repeat.
-    c, r = cells[-1][0], cells[-1][1]
-    cx = grid_x + c * pitch + size / 2
-    cy = grid_y + r * pitch + size / 2
-    s0, s1 = size + 2, size + 10
-    out.append(
-        f'<rect x="{cx - s0 / 2:.1f}" y="{cy - s0 / 2:.1f}" width="{s0:.1f}" height="{s0:.1f}" rx="3.5" '
-        f'fill="none" stroke="{ACCENT}" stroke-width="1.5">'
-        + "".join(
-            f'<animate attributeName="{a}" values="{v0:.1f};{v1:.1f}" dur="1.8s" begin="{begin:.2f}s" '
-            f'repeatCount="indefinite"/>'
-            for a, v0, v1 in (
-                ("x", cx - s0 / 2, cx - s1 / 2), ("y", cy - s0 / 2, cy - s1 / 2),
-                ("width", s0, s1), ("height", s0, s1),
-            )
-        )
-        + f'<animate attributeName="stroke-opacity" values="1;0" dur="1.8s" begin="{begin:.2f}s" '
-        f'repeatCount="indefinite"/></rect>'
-    )
-    return out
 
 
 def build(data: dict) -> str:
@@ -172,8 +111,6 @@ def build(data: dict) -> str:
         )
 
     end = START + (ncols + 7) * CELL_DELAY
-    if not STATIC:
-        out += radar(cells, grid_x, grid_y, pitch, size, ncols, end)
 
     # Footer: last-updated on the left, Less -> More legend on the right.
     fy = grid_y + 7 * pitch - GAP + 26
