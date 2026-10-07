@@ -92,7 +92,7 @@ def main() -> None:
 
     gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
     if flat:
-        gray = flatten_skin(rgb, gray, int(os.environ.get("SKIN_TONE", "235")))
+        gray = flatten_skin(rgb, gray, int(os.environ.get("SKIN_TONE", "160")))
     else:
         gray = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8)).apply(gray)
     gray = gray.astype(np.float32)
