@@ -1,0 +1,5 @@
+# portrait-only (run locally when the photo changes; not needed by the daily workflow)
+pillow
+numpy
+opencv-python-headless
+rembg[cpu]
