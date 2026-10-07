@@ -58,8 +58,8 @@ FOOTER = [
 # Boxes in source-image pixels (x0, y0, x1, y1), mapped onto the character grid.
 EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
 LENSES = [(330, 410, 465, 525), (495, 405, 640, 522)]
-BLINK_EVERY = 4.6  # seconds between blinks
-GLINT_EVERY = 7.0  # seconds between lens glints
+BLINK_EVERY = 3.0  # seconds between blinks
+GLINT_EVERY = 5.0  # seconds between lens glints
 
 STATIC = os.environ.get("STATIC") == "1"
 
