@@ -57,9 +57,7 @@ FOOTER = [
 
 # Boxes in source-image pixels (x0, y0, x1, y1), mapped onto the character grid.
 EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
-LENSES = [(330, 410, 465, 525), (495, 405, 640, 522)]
 BLINK_EVERY = 3.0  # seconds between blinks
-GLINT_EVERY = 5.0  # seconds between lens glints
 
 STATIC = os.environ.get("STATIC") == "1"
 
@@ -236,39 +234,10 @@ def footer(w: float, foot_y: float, done: float, font: str) -> list[str]:
 
 
 def face_fx(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
-    """Looping blink (eyes swap to closed lids) and a light glint sweeping across the lenses."""
+    """Looping blink: the eye glyphs swap to closed lids for a moment."""
     if STATIC:
         return []
-    out = [
-        "<defs>",
-        '<linearGradient id="glint" x1="0" x2="1" y1="0" y2="0">'
-        '<stop offset="0" stop-color="#fff" stop-opacity="0"/>'
-        '<stop offset=".5" stop-color="#fff" stop-opacity=".3"/>'
-        '<stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>',
-    ]
-    boxes = []
-    for i, (bx0, by0, bx1, by1) in enumerate(LENSES):
-        c0, r0 = to_cell(bx0, by0)
-        c1, r1 = to_cell(bx1, by1)
-        x, y = PAD + c0 * CHAR_W, art_y + r0 * LINE_H
-        bw, bh = (c1 - c0) * CHAR_W, (r1 - r0) * LINE_H
-        boxes.append((x, y, bw, bh))
-        out.append(f'<clipPath id="lens{i}"><rect x="{x:g}" y="{y:g}" width="{bw:g}" height="{bh:g}" rx="6"/></clipPath>')
-    out.append("</defs>")
-
-    # Glint: a slanted band of light crosses the left lens, then the right one.
-    band = 18
-    sweep = 0.55 / GLINT_EVERY
-    for i, (x, y, bw, bh) in enumerate(boxes):
-        start = done + 1.5 + i * 0.35
-        travel = bw + band + bh
-        out.append(
-            f'<g clip-path="url(#lens{i})"><g transform="translate({x - band - bh:g} 0)">'
-            f'<polygon points="{bh:g},{y:g} {bh + band:g},{y:g} {band:g},{y + bh:g} 0,{y + bh:g}" fill="url(#glint)">'
-            f'<animateTransform attributeName="transform" type="translate" '
-            f'values="0 0;0 0;{travel:g} 0;{travel:g} 0" keyTimes="0;{1 - sweep - .01:.3f};.99;1" '
-            f'dur="{GLINT_EVERY}s" begin="{start:.2f}s" repeatCount="indefinite"/></polygon></g></g>'
-        )
+    out = []
 
     # Blink: cover each eye with skin-toned glyphs and a lid line for ~150 ms.
     font = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace"
