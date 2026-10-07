@@ -6,6 +6,7 @@ staggered top to bottom. Plays once and freezes (SMIL, so GitHub's <img> renders
 Usage: python scripts/make_ascii_svg.py            # writes ascii-portrait.svg
        STATIC=1 python scripts/make_ascii_svg.py   # frozen frame, no animation
 """
+import math
 import os
 from pathlib import Path
 
@@ -58,6 +59,9 @@ FOOTER = [
 # Boxes in source-image pixels (x0, y0, x1, y1), mapped onto the character grid.
 EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
 BLINK_EVERY = 3.0  # seconds between blinks
+SWAY_CELLS = 2  # how far (in characters) the top of the hair drifts in the wind
+SWAY_PERIOD = 3.2  # seconds per gust
+SWAY_LAG = 0.09  # delay per row, so the gust ripples down through the hair
 
 STATIC = os.environ.get("STATIC") == "1"
 
@@ -233,6 +237,33 @@ def footer(w: float, foot_y: float, done: float, font: str) -> list[str]:
     return out
 
 
+def hair_sway(lines: list[str], done: float) -> dict[int, str]:
+    """Wind in the hair: rows above the face drift sideways in whole-character steps.
+
+    The top of the hair drifts most and the motion fades out toward the forehead; each
+    row starts a little after the one above, so every gust ripples down through the hair.
+    """
+    # The face starts at the first row with a solid run of skin/feature glyphs.
+    face_top = next(
+        (r for r, line in enumerate(lines) if sum(line.count(c) for c in "s#%@c*") >= 8), len(lines)
+    )
+    steps = 12
+    anims = {}
+    for r in range(face_top):
+        amp = round(SWAY_CELLS * (1 - r / face_top) ** 0.8)
+        if not amp:
+            continue
+        # Pushed one way by the gust and back again, never past the resting position.
+        offs = [round(amp * (0.5 - 0.5 * math.cos(2 * math.pi * k / steps))) for k in range(steps)]
+        vals = ";".join(f"{o * CHAR_W:g} 0" for o in offs)
+        anims[r] = (
+            f'<animateTransform attributeName="transform" type="translate" values="{vals}" '
+            f'calcMode="discrete" dur="{SWAY_PERIOD}s" begin="{done + r * SWAY_LAG:.2f}s" '
+            f'repeatCount="indefinite"/>'
+        )
+    return anims
+
+
 def face_fx(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
     """Looping blink: the eye glyphs swap to closed lids for a moment."""
     if STATIC:
@@ -302,13 +333,14 @@ def build(lines: list[str], to_cell) -> str:
             )
         out.append("</defs>")
 
+    sway = {} if STATIC else hair_sway(lines, done)
     out.append(f'<g font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}">')
     for i, line in enumerate(lines):
         baseline = art_y + i * LINE_H + LINE_H * 0.8
         clip = "" if STATIC else f' clip-path="url(#r{i})"'
         out.append(
             f'<text x="{PAD}" y="{baseline:g}" textLength="{text_w:g}" '
-            f'lengthAdjust="spacingAndGlyphs"{clip}>{shade(line)}</text>'
+            f'lengthAdjust="spacingAndGlyphs"{clip}>{shade(line)}{sway.get(i, "")}</text>'
         )
     out.append("</g>")
 
