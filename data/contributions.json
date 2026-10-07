@@ -1,15 +1,23 @@
 {
  "user": "MMMustafakamran",
- "fetched_at": "2026-10-07T10:05:28+00:00",
+ "fetched_at": "2026-10-07T10:49:28+00:00",
  "range": {
   "start": "2025-10-05",
   "end": "2026-10-07"
  },
  "stats": {
-  "total": 2020,
+  "total": 2021,
   "active_days": 141,
   "current_streak": 4,
+  "current_streak_range": [
+   "2026-10-04",
+   "2026-10-07"
+  ],
   "longest_streak": 11,
+  "longest_streak_range": [
+   "2026-08-11",
+   "2026-08-21"
+  ],
   "best_day": {
    "date": "2026-09-12",
    "count": 140
@@ -27,7 +35,7 @@
    "2026-07": 340,
    "2026-08": 420,
    "2026-09": 860,
-   "2026-10": 44
+   "2026-10": 45
   }
  },
  "days": [
@@ -1868,7 +1876,7 @@
   },
   {
    "date": "2026-10-07",
-   "count": 3,
+   "count": 4,
    "level": 1
   }
  ]

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="648" height="814.4" viewBox="0 0 648 814.4">
+<style>
+text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;fill:#e6edf3}
+.lbl{font-size:14px;fill:#8b949e} .num{font-size:38px;font-weight:700} .unit{font-size:15px;fill:#8b949e} .sub{font-size:12.5px;fill:#8b949e} .ax{font-size:12px;fill:#8b949e} .hot{fill:#39d353}
+.t{opacity:0;animation:up .5s ease-out forwards}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.b{transform-box:fill-box;transform-origin:bottom;transform:scaleY(0);animation:grow .7s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes grow{to{transform:scaleY(1)}}
+.live{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+</style>
+<rect x=".5" y=".5" width="647" height="813.4" rx="10" fill="#0d1117" stroke="#30363d"/>
+<path d="M.5 30V10.5a10 10 0 0 1 10-10h627a10 10 0 0 1 10 10V30z" fill="#161b22"/>
+<line x1=".5" y1="30" x2="647.5" y2="30" stroke="#30363d"/>
+<circle cx="18" cy="15.0" r="5" fill="#ff5f56"/>
+<circle cx="34" cy="15.0" r="5" fill="#ffbd2e"/>
+<circle cx="50" cy="15.0" r="5" fill="#27c93f"/>
+<text x="324" y="19.0" text-anchor="middle" style="font-size:11px;fill:#8b949e">mustafa@github: ~ ./stats.sh</text>
+<g class="t" style="animation-delay:0.30s"><rect x="20" y="50" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="38" y="77" class="lbl">$ current streak</text><circle class="live" cx="299" cy="72" r="4.5" fill="#39d353"/><text x="38" y="120" class="num hot">4</text><text x="68.8" y="120" class="unit">days</text><text x="38" y="144" class="sub">Oct 4 – Oct 7</text></g>
+<g class="t" style="animation-delay:0.42s"><rect x="331" y="50" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="349" y="77" class="lbl">$ longest streak</text><text x="349" y="120" class="num">11</text><text x="402.6" y="120" class="unit">days</text><text x="349" y="144" class="sub">Aug 11 – Aug 21</text></g>
+<g class="t" style="animation-delay:0.54s"><rect x="20" y="176" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="38" y="203" class="lbl">$ contributions</text><text x="38" y="246" class="num">2,021</text><text x="38" y="270" class="sub">in the last year</text></g>
+<g class="t" style="animation-delay:0.66s"><rect x="331" y="176" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="349" y="203" class="lbl">$ active days</text><text x="349" y="246" class="num">141</text><text x="425.4" y="246" class="unit">/ 368</text><text x="349" y="270" class="sub">38% of the year</text></g>
+<g class="t" style="animation-delay:0.78s"><rect x="20" y="302" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="38" y="329" class="lbl">$ best day</text><text x="38" y="372" class="num">140</text><text x="38" y="396" class="sub">Sep 12</text></g>
+<g class="t" style="animation-delay:0.90s"><rect x="331" y="302" width="297" height="112" rx="8" fill="#111821" stroke="#30363d"/><text x="349" y="329" class="lbl">$ avg / active day</text><text x="349" y="372" class="num">14.3</text><text x="349" y="396" class="sub">contributions</text></g>
+<g class="t" style="animation-delay:1.02s"><rect x="20" y="428" width="608" height="366.4" rx="8" fill="#111821" stroke="#30363d"/><text x="38" y="455" class="lbl">$ contributions / month</text></g>
+<rect class="b" style="animation-delay:1.14s" x="46.4" y="751.4" width="27.3" height="3.0" rx="2" fill="#26a641"><title>2025-10: 6</title></rect>
+<text x="60.0" y="776.4" text-anchor="middle" class="ax">O</text>
+<rect class="b" style="animation-delay:1.19s" x="90.4" y="748.4" width="27.3" height="6.0" rx="2" fill="#26a641"><title>2025-11: 20</title></rect>
+<text x="104.0" y="776.4" text-anchor="middle" class="ax">N</text>
+<rect class="b" style="animation-delay:1.24s" x="134.4" y="732.9" width="27.3" height="21.5" rx="2" fill="#26a641"><title>2025-12: 72</title></rect>
+<text x="148.0" y="776.4" text-anchor="middle" class="ax">D</text>
+<rect class="b" style="animation-delay:1.29s" x="178.4" y="749.0" width="27.3" height="5.4" rx="2" fill="#26a641"><title>2026-01: 18</title></rect>
+<text x="192.0" y="776.4" text-anchor="middle" class="ax">J</text>
+<rect class="b" style="animation-delay:1.34s" x="222.4" y="749.3" width="27.3" height="5.1" rx="2" fill="#26a641"><title>2026-02: 17</title></rect>
+<text x="236.0" y="776.4" text-anchor="middle" class="ax">F</text>
+<rect class="b" style="animation-delay:1.39s" x="266.4" y="731.1" width="27.3" height="23.3" rx="2" fill="#26a641"><title>2026-03: 78</title></rect>
+<text x="280.0" y="776.4" text-anchor="middle" class="ax">M</text>
+<rect class="b" style="animation-delay:1.44s" x="310.4" y="741.9" width="27.3" height="12.5" rx="2" fill="#26a641"><title>2026-04: 42</title></rect>
+<text x="324.0" y="776.4" text-anchor="middle" class="ax">A</text>
+<rect class="b" style="animation-delay:1.49s" x="354.4" y="724.0" width="27.3" height="30.4" rx="2" fill="#26a641"><title>2026-05: 102</title></rect>
+<text x="368.0" y="776.4" text-anchor="middle" class="ax">M</text>
+<rect class="b" style="animation-delay:1.54s" x="398.4" y="751.4" width="27.3" height="3.0" rx="2" fill="#26a641"><title>2026-06: 1</title></rect>
+<text x="412.0" y="776.4" text-anchor="middle" class="ax">J</text>
+<rect class="b" style="animation-delay:1.59s" x="442.4" y="653.0" width="27.3" height="101.4" rx="2" fill="#26a641"><title>2026-07: 340</title></rect>
+<text x="456.0" y="776.4" text-anchor="middle" class="ax">J</text>
+<rect class="b" style="animation-delay:1.64s" x="486.4" y="629.2" width="27.3" height="125.2" rx="2" fill="#26a641"><title>2026-08: 420</title></rect>
+<text x="500.0" y="776.4" text-anchor="middle" class="ax">A</text>
+<rect class="b" style="animation-delay:1.69s" x="530.4" y="498.0" width="27.3" height="256.4" rx="2" fill="#69f0a0"><title>2026-09: 860</title></rect>
+<g class="t" style="animation-delay:1.38s"><text x="544.0" y="490.0" text-anchor="middle" style="font-size:12px;font-weight:700">860</text></g>
+<text x="544.0" y="776.4" text-anchor="middle" class="ax">S</text>
+<rect class="b" style="animation-delay:1.74s" x="574.4" y="741.0" width="27.3" height="13.4" rx="2" fill="#26a641"><title>2026-10: 45</title></rect>
+<text x="588.0" y="776.4" text-anchor="middle" class="ax">O</text>
+</svg>

@@ -53,18 +53,25 @@ def parse_days(html: str) -> list[dict]:
     return days
 
 
-def streaks(days: list[dict]) -> tuple[int, int]:
-    longest = run = 0
+def streaks(days: list[dict]) -> tuple[dict, dict]:
+    """Return (current, longest) streaks as {"days", "start", "end"}."""
+    longest = {"days": 0, "start": None, "end": None}
+    run_start, run = None, 0
     for d in days:
-        run = run + 1 if d["count"] > 0 else 0
-        longest = max(longest, run)
+        if d["count"] > 0:
+            run_start = run_start if run else d["date"]
+            run += 1
+            if run > longest["days"]:
+                longest = {"days": run, "start": run_start, "end": d["date"]}
+        else:
+            run = 0
     # Current streak: an empty "today" doesn't break it (the day isn't over yet).
-    current = 0
     tail = days[:-1] if days and days[-1]["count"] == 0 else days
+    current = {"days": 0, "start": None, "end": None}
     for d in reversed(tail):
         if d["count"] == 0:
             break
-        current += 1
+        current = {"days": current["days"] + 1, "start": d["date"], "end": current["end"] or d["date"]}
     return current, longest
 
 
@@ -85,8 +92,10 @@ def main() -> None:
         "stats": {
             "total": sum(d["count"] for d in days),
             "active_days": sum(1 for d in days if d["count"] > 0),
-            "current_streak": current,
-            "longest_streak": longest,
+            "current_streak": current["days"],
+            "current_streak_range": [current["start"], current["end"]],
+            "longest_streak": longest["days"],
+            "longest_streak_range": [longest["start"], longest["end"]],
             "best_day": {"date": best["date"], "count": best["count"]},
             "monthly": monthly,
         },
@@ -96,7 +105,7 @@ def main() -> None:
     OUT.write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
     s = data["stats"]
     print(f"{user}: {s['total']} contributions, {len(days)} days "
-          f"({days[0]['date']} -> {days[-1]['date']}), streak {current}/{longest}")
+          f"({days[0]['date']} -> {days[-1]['date']}), streak {current['days']}/{longest['days']}")
 
 
 if __name__ == "__main__":

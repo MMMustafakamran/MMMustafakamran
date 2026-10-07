@@ -36,11 +36,6 @@ STATIC = os.environ.get("STATIC") == "1"
 MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
 
 
-def fmt_day(iso: str) -> str:
-    d = date.fromisoformat(iso)
-    return f"{MONTHS[d.month - 1]} {d.day}"
-
-
 def build(data: dict) -> str:
     days = data["days"]
     stats = data["stats"]
@@ -73,7 +68,7 @@ def build(data: dict) -> str:
         "<style>",
         "text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;"
         f"font-size:11px;fill:{MUTED}}}",
-        f".h{{font-size:13px;fill:{FG}}} .a{{fill:{ACCENT};font-weight:700}} .b{{fill:{FG};font-weight:700}}",
+        f".h{{font-size:13px;fill:{FG}}} .a{{fill:{ACCENT};font-weight:700}}",
     ]
     if not STATIC:
         out += [
@@ -87,18 +82,11 @@ def build(data: dict) -> str:
         f'<rect x=".5" y=".5" width="{W - 1}" height="{h - 1}" rx="10" fill="{BG}" stroke="{BORDER}"/>',
     ]
 
-    # Header: total on the left, streaks on the right.
+    # Header: the yearly total (streaks and the rest live in stats-card.svg).
     total = f"{stats['total']:,}"
     out.append(
         f'<text x="{PAD}" y="{PAD + 6}" class="h"><tspan class="a">{total}</tspan> '
         f"contributions in the last year</text>"
-    )
-    out.append(
-        f'<text x="{W - PAD}" y="{PAD + 6}" text-anchor="end">'
-        f'streak <tspan class="b">{stats["current_streak"]}d</tspan>  ·  '
-        f'longest <tspan class="b">{stats["longest_streak"]}d</tspan>  ·  '
-        f'best day <tspan class="b">{stats["best_day"]["count"]}</tspan> '
-        f'({fmt_day(stats["best_day"]["date"])})</text>'
     )
 
     # Month labels at the first column whose week contains the 1st..7th of a month.
