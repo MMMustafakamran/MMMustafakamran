@@ -7,8 +7,10 @@ Usage: python scripts/make_ascii_svg.py            # writes ascii-portrait.svg
        STATIC=1 python scripts/make_ascii_svg.py   # frozen frame, no animation
 """
 import os
+import random
 from pathlib import Path
 
+import cv2
 import numpy as np
 from PIL import Image
 
@@ -19,6 +21,7 @@ OUT = ROOT / "ascii-portrait.svg"
 RAMP = " .`:-=+*cs#%@"  # bright (sparse) -> dark (dense); leading space clears the background
 COLS = 120
 SHADES = [".55", ".6", ".78", "1"]  # glyph opacity per density band, sparse -> dense
+HAIR_MAX = 70  # cells darker than this (0-255) can count as hair for the shimmer
 GAMMA = 1.0  # <1 lightens mid-tones (sparser skin, outlines pop), >1 darkens them
 LINE_WEIGHT = 0.5  # 0..1: how much each cell's darkest pixels count (keeps thin outlines)
 POSITIVE = True  # bright -> dense (reads like the source); False = classic negative look
@@ -57,7 +60,14 @@ FOOTER = [
 
 # Boxes in source-image pixels (x0, y0, x1, y1), mapped onto the character grid.
 EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
+LENSES = [(330, 410, 465, 525), (495, 405, 640, 522)]
+MOUTH = (395, 590, 555, 612)
 BLINK_EVERY = 3.0  # seconds between blinks
+GLINT_EVERY = 5.0  # seconds between `/` streaks across the lenses
+SHIMMER_EVERY = 6.0  # seconds between glyph waves through the hair
+SMILE_EVERY = 7.0  # seconds between grins
+RAIN_COLS = 16  # falling glyph columns in the empty space
+RAIN_GLYPHS = "01:.<>/|+=*"
 
 STATIC = os.environ.get("STATIC") == "1"
 
@@ -74,7 +84,7 @@ def dark_pool(arr: np.ndarray, cols: int, rows: int) -> np.ndarray:
     return out
 
 
-def load_grid() -> tuple[list[str], callable]:
+def load_grid() -> tuple[list[str], callable, np.ndarray]:
     img = Image.open(SRC).convert("L")
     arr = np.asarray(img, dtype=np.float32)
     subject = arr < 250  # the prep step composited the background to pure white
@@ -107,8 +117,13 @@ def load_grid() -> tuple[list[str], callable]:
         mask = np.asarray(Image.fromarray(subject.astype(np.uint8) * 255).resize((COLS, rows), Image.Resampling.BOX))
         idx = 2 + (small / 256.0 * (len(RAMP) - 2)).astype(int).clip(0, len(RAMP) - 3)
         idx = np.where(mask > 127, idx, 0)
+        # Hair = large dark areas of the subject. Opening drops 1-cell-wide outlines
+        # (jaw, glasses, nose) so the hair shimmer stays on the hair.
+        hair = ((mask > 127) & (small < HAIR_MAX)).astype(np.uint8)
+        hair = cv2.morphologyEx(hair, cv2.MORPH_OPEN, np.ones((2, 3), np.uint8)).astype(bool)
     else:
         idx = ((255.0 - small) / 256.0 * len(RAMP)).astype(int).clip(0, len(RAMP) - 1)
+        hair = np.zeros(idx.shape, bool)
     lines = ["".join(RAMP[i] for i in row) for row in idx]
     # Trim blank rows top and bottom so the portrait sits snug in its frame.
     top = 0
@@ -124,7 +139,7 @@ def load_grid() -> tuple[list[str], callable]:
         row = (y - y0) / (y1 - y0) * rows - top
         return round(col), round(row)
 
-    return lines, to_cell
+    return lines, to_cell, hair[top:top + len(lines)]
 
 
 def esc(s: str) -> str:
@@ -140,7 +155,12 @@ def shade(line: str) -> str:
     bands = len(SHADES)
     parts, run, run_band = [], "", None
     for ch in line:
-        band = None if ch == " " else min(RAMP.index(ch) * bands // len(RAMP), bands - 1)
+        if ch == " ":
+            band = None
+        elif ch in RAMP:
+            band = min(RAMP.index(ch) * bands // len(RAMP), bands - 1)
+        else:
+            band = bands - 1  # effect glyphs (/ \ etc.) print at full brightness
         if run and band != run_band and not (ch == " " and run_band is None):
             parts.append((run_band, run))
             run = ""
@@ -233,6 +253,149 @@ def footer(w: float, foot_y: float, done: float, font: str) -> list[str]:
     return out
 
 
+def cells_text(x_col: int, row: int, text: str, art_y: float, cls: str = "") -> str:
+    """A run of glyphs placed exactly on the grid, with a background patch under it."""
+    x = PAD + x_col * CHAR_W
+    y = art_y + row * LINE_H
+    n = len(text)
+    c = f' class="{cls}"' if cls else ""
+    return (
+        f'<rect x="{x:g}" y="{y:g}" width="{n * CHAR_W:g}" height="{LINE_H:g}" fill="{BG}"/>'
+        f'<text{c} x="{x:g}" y="{y + LINE_H * 0.8:g}" textLength="{n * CHAR_W:g}" '
+        f'lengthAdjust="spacingAndGlyphs">{shade(text)}</text>'
+    )
+
+
+def bump(ch: str, k: int) -> str:
+    """Same cell, k steps denser/brighter on the ramp."""
+    if ch == " ":
+        return ch
+    return RAMP[min(RAMP.index(ch) + k, len(RAMP) - 1)]
+
+
+def sweep_clip(cid: str, x0: float, x1: float, y: float, win: float, begin: float,
+               move: float, every: float) -> str:
+    """A window `win` wide that slides from x0 to x1 in `move` s, repeating every `every` s."""
+    frac = move / every
+    return (
+        f'<clipPath id="{cid}"><rect x="{x0 - win:g}" y="{y:g}" width="{win:g}" height="{LINE_H:g}">'
+        f'<animate attributeName="x" values="{x0 - win:g};{x1:g};{x1:g}" keyTimes="0;{frac:.3f};1" '
+        f'dur="{every}s" begin="{begin:.3f}s" repeatCount="indefinite"/></rect></clipPath>'
+    )
+
+
+def hair_shimmer(lines: list[str], hair, art_y: float, done: float) -> list[str]:
+    """A diagonal wave runs through the hair; glyphs it passes step up the ramp, then settle."""
+    text_w = COLS * CHAR_W
+    move = 1.4
+    speed = (text_w + 60) / move
+    row_lag = LINE_H / speed  # one row lower = starts later -> a slanted wave front
+    layers = [(1, 12), (4, 4)]  # (ramp boost, window width in cells): soft halo, bright core
+    defs, body = [], []
+    for r, line in enumerate(lines):
+        cols = [c for c in range(len(line)) if hair[r][c]]
+        if not cols:
+            continue
+        lo, hi = min(cols), max(cols) + 1
+        begin = done + 1.2 + r * row_lag
+        for li, (boost, win) in enumerate(layers):
+            seg = "".join(bump(line[c], boost) if hair[r][c] else line[c] for c in range(lo, hi))
+            cid = f"hs{li}_{r}"
+            # The core trails the halo's centre so the brightest glyphs sit mid-wave.
+            lag = (layers[0][1] - win) / 2 * CHAR_W / speed
+            defs.append(sweep_clip(cid, PAD, PAD + text_w, art_y + r * LINE_H, win * CHAR_W,
+                                   begin + lag, move, SHIMMER_EVERY))
+            body.append(f'<g clip-path="url(#{cid})">{cells_text(lo, r, seg, art_y)}</g>')
+    return ["<defs>", *defs, "</defs>", *body]
+
+
+def lens_glint(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
+    """A `/` streak of bright glyphs steps across each lens."""
+    defs, body = [], []
+    move = 0.45
+    for i, (bx0, by0, bx1, by1) in enumerate(LENSES):
+        c0, r0 = to_cell(bx0, by0)
+        c1, r1 = to_cell(bx1, by1)
+        width = (c1 - c0) * CHAR_W
+        speed = (width + 2 * CHAR_W) / move
+        for r in range(max(r0, 0), min(r1, len(lines))):
+            # Lower rows start later by one cell's travel, so the streak leans like "/".
+            begin = done + 2.0 + i * 0.3 + (r - r0) * CHAR_W / speed
+            cid = f"gl{i}_{r}"
+            defs.append(sweep_clip(cid, PAD + c0 * CHAR_W, PAD + c1 * CHAR_W, art_y + r * LINE_H,
+                                   2 * CHAR_W, begin, move, GLINT_EVERY))
+            body.append(f'<g clip-path="url(#{cid})">{cells_text(c0, r, "/" * (c1 - c0), art_y, "hi")}</g>')
+    return ["<defs>", *defs, "</defs>", *body]
+
+
+def grin(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
+    """Now and then the smile line widens into an open grin for a moment."""
+    c0, r0 = to_cell(MOUTH[0], MOUTH[1])
+    c1, r1 = to_cell(MOUTH[2], MOUTH[3])
+    rows = range(max(r0, 0), min(r1 + 1, len(lines)))
+    # The smile is the row inside the box with the longest run of "-"/"=" glyphs.
+    def run(r: int) -> tuple[int, int, int]:
+        best = (0, 0, 0)
+        c = c0
+        while c < c1:
+            if lines[r][c] in "-=":
+                s = c
+                while c < c1 and lines[r][c] in "-=":
+                    c += 1
+                best = max(best, (c - s, s, c))
+            c += 1
+        return best
+    rm = max(rows, key=lambda r: run(r)[0])
+    _, lo, hi = run(rm)
+    top = "\\" + "#" * (hi - lo + 2) + "/"
+    bottom = "\\" + "=" * max(hi - lo - 4, 2) + "/"
+    on = 0.7 / SMILE_EVERY
+    return [
+        f'<g opacity="0">{cells_text(lo - 2, rm, top, art_y)}'
+        f'{cells_text(lo + 1, rm + 1, bottom, art_y)}'
+        f'<animate attributeName="opacity" values="0;1;0" keyTimes="0;{1 - on:.3f};1" calcMode="discrete" '
+        f'dur="{SMILE_EVERY}s" begin="{done + 2.6:.2f}s" repeatCount="indefinite"/></g>'
+    ]
+
+
+def rain(lines: list[str], art_y: float, done: float) -> list[str]:
+    """Faint falling columns of glyphs in the empty space around the portrait, never over it."""
+    rng = random.Random(7)  # fixed seed: same output every run
+    n_rows = len(lines)
+    free = [c for c in range(COLS) if sum(line[c] == " " for line in lines) >= n_rows * 0.45]
+    picks: list[int] = []
+    for c in rng.sample(free, len(free)):
+        if all(abs(c - p) >= 3 for p in picks):
+            picks.append(c)
+        if len(picks) == RAIN_COLS:
+            break
+    trail = 9 * LINE_H
+    defs = [
+        "<defs>",
+        '<linearGradient id="trail" x1="0" x2="0" y1="0" y2="1">'
+        '<stop offset="0" stop-color="#000"/><stop offset=".85" stop-color="#fff" stop-opacity=".9"/>'
+        '<stop offset="1" stop-color="#fff"/></linearGradient>',
+    ]
+    body = []
+    top, bottom = art_y - trail, art_y + n_rows * LINE_H
+    for i, c in enumerate(sorted(picks)):
+        x = PAD + c * CHAR_W
+        glyphs = "".join(
+            f'<tspan x="{x:g}" y="{art_y + r * LINE_H + LINE_H * 0.8:g}">{esc(rng.choice(RAIN_GLYPHS))}</tspan>'
+            for r in range(n_rows) if lines[r][c] == " "
+        )
+        dur = rng.uniform(3.2, 6.0)
+        begin = done + rng.uniform(0, dur)
+        defs.append(
+            f'<mask id="rm{i}"><rect x="{x - 1:g}" y="{top:g}" width="{CHAR_W + 2:g}" height="{trail:g}" fill="url(#trail)">'
+            f'<animate attributeName="y" values="{top:g};{bottom:g}" dur="{dur:.2f}s" begin="{begin:.2f}s" '
+            f'repeatCount="indefinite"/></rect></mask>'
+        )
+        body.append(f'<text mask="url(#rm{i})" class="rain">{glyphs}</text>')
+    defs.append("</defs>")
+    return defs + body
+
+
 def face_fx(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
     """Looping blink: the eye glyphs swap to closed lids for a moment."""
     if STATIC:
@@ -267,7 +430,7 @@ def face_fx(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
     return out
 
 
-def build(lines: list[str], to_cell) -> str:
+def build(lines: list[str], to_cell, hair) -> str:
     text_w = COLS * CHAR_W
     w = text_w + 2 * PAD
     art_y = TITLE_H + PAD
@@ -279,6 +442,7 @@ def build(lines: list[str], to_cell) -> str:
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:g}" height="{h:g}" viewBox="0 0 {w:g} {h:g}">',
         f'<rect x=".5" y=".5" width="{w - 1:g}" height="{h - 1:g}" rx="10" fill="{BG}" stroke="{BORDER}"/>',
+        f"<style>.hi{{fill:#fff}} .rain{{fill:{ACCENT};fill-opacity:.4}}</style>",
         # Terminal title bar.
         f'<path d="M.5 {TITLE_H}V10.5a10 10 0 0 1 10-10h{w - 21:g}a10 10 0 0 1 10 10V{TITLE_H}z" fill="{BAR}"/>',
         f'<line x1=".5" y1="{TITLE_H}" x2="{w - .5:g}" y2="{TITLE_H}" stroke="{BORDER}"/>',
@@ -302,6 +466,10 @@ def build(lines: list[str], to_cell) -> str:
             )
         out.append("</defs>")
 
+    if not STATIC:
+        out.append(f'<g font-family="{font}" font-size="{FONT_SIZE}">')
+        out += rain(lines, art_y, done)
+        out.append("</g>")
     out.append(f'<g font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}">')
     for i, line in enumerate(lines):
         baseline = art_y + i * LINE_H + LINE_H * 0.8
@@ -326,6 +494,12 @@ def build(lines: list[str], to_cell) -> str:
             )
         out.append("</g>")
 
+    if not STATIC:
+        out.append(f'<g font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}">')
+        out += hair_shimmer(lines, hair, art_y, done)
+        out += lens_glint(lines, to_cell, art_y, done)
+        out += grin(lines, to_cell, art_y, done)
+        out.append("</g>")
     out += face_fx(lines, to_cell, art_y, done)
     out += footer(w, foot_y, done, font)
 
@@ -334,8 +508,8 @@ def build(lines: list[str], to_cell) -> str:
 
 
 def main() -> None:
-    lines, to_cell = load_grid()
-    OUT.write_text(build(lines, to_cell), encoding="utf-8")
+    lines, to_cell, hair = load_grid()
+    OUT.write_text(build(lines, to_cell, hair), encoding="utf-8")
     print(f"wrote {OUT.name} ({COLS}x{len(lines)} chars)")
 
 
