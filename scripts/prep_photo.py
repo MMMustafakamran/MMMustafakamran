@@ -66,6 +66,20 @@ def flat_alpha(rgb: np.ndarray, n_colors: int = 2, tol: float = 34.0) -> np.ndar
     return cv2.GaussianBlur(mask, (3, 3), 0)
 
 
+def flatten_skin(rgb: np.ndarray, gray: np.ndarray, tone: int) -> np.ndarray:
+    """Paint skin one even tone so shading/stubble don't turn into blotchy ASCII.
+
+    Skin = warm hue, saturated, reasonably bright. Dark outlines (eyes, nose, smile, jaw)
+    and the low-saturation glasses fall outside the mask and keep their own values.
+    """
+    h, s, v = cv2.split(cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV))
+    skin = ((h >= 3) & (h <= 22) & (s >= 90) & (v >= 120)).astype(np.uint8)
+    skin = cv2.morphologyEx(skin, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    out = gray.copy()
+    out[skin > 0] = tone
+    return out
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     flat = "--flat" in sys.argv
@@ -77,7 +91,9 @@ def main() -> None:
     alpha = flat_alpha(rgb) if flat else rembg_alpha(img)
 
     gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
-    if not flat:
+    if flat:
+        gray = flatten_skin(rgb, gray, int(os.environ.get("SKIN_TONE", "235")))
+    else:
         gray = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8)).apply(gray)
     gray = gray.astype(np.float32)
 
