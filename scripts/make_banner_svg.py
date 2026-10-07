@@ -15,18 +15,15 @@ ROOT = Path(__file__).resolve().parent.parent
 ART = Path(__file__).with_name("name-art.txt")
 OUT = ROOT / "banner.svg"
 
-USER_HOST = "mustafa@github"
 TAGLINE = "Fullstack Developer · AI Engineer · Cloud Architect"
 
 W = 860
 PAD = 24
-TITLE_H = 30
 FONT_SIZE = 13
 CW = 7.8  # forced character width at FONT_SIZE
 LINE_H = 21
 
 BG = "#0d1117"
-BAR = "#161b22"
 BORDER = "#30363d"
 FG = "#c9d1d9"
 MUTED = "#8b949e"
@@ -85,7 +82,7 @@ def build() -> str:
     cw = (W - 2 * PAD) / cols
     ch = cw * 2.0
 
-    art_y = TITLE_H + PAD + 4
+    art_y = PAD + 4
     tag_y = art_y + len(art) * ch + 30
     h = round(tag_y + PAD - 2)
 
@@ -99,15 +96,7 @@ def build() -> str:
         f".m{{fill:{MUTED}}} .ok{{fill:{ACCENT};font-weight:700}} .a{{fill:{ACCENT}}}",
         "</style>",
         f'<rect x=".5" y=".5" width="{W - 1}" height="{h - 1}" rx="10" fill="{BG}" stroke="{BORDER}"/>',
-        f'<path d="M.5 {TITLE_H}V10.5a10 10 0 0 1 10-10h{W - 21}a10 10 0 0 1 10 10V{TITLE_H}z" fill="{BAR}"/>',
-        f'<line x1=".5" y1="{TITLE_H}" x2="{W - .5}" y2="{TITLE_H}" stroke="{BORDER}"/>',
     ]
-    for i, c in enumerate(["#ff5f56", "#ffbd2e", "#27c93f"]):
-        out.append(f'<circle cx="{18 + i * 16}" cy="{TITLE_H / 2}" r="5" fill="{c}"/>')
-    out.append(
-        f'<text x="{W / 2}" y="{TITLE_H / 2 + 4}" text-anchor="middle" class="m" style="font-size:11px">'
-        f"{USER_HOST}: ~</text>"
-    )
 
     def show(t: float) -> tuple[str, str]:
         """(opening attrs, child <set>) to make an element appear at time t."""
