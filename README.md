@@ -18,8 +18,8 @@
 <br>
 
 
-[![Portfolio](https://img.shields.io/badge/PORTFOLIO-mustafakamran.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white&labelColor=555555)](https://mustafakamran.vercel.app)
-[![LinkedIn](https://img.shields.io/badge/LINKEDIN-mustafakamran03-0077B5?style=for-the-badge&logo=linkedin&logoColor=white&labelColor=555555)](https://linkedin.com/in/mustafaKamran03)
-[![Email](https://img.shields.io/badge/EMAIL-mmmustafakamran@gmail.com-D14836?style=for-the-badge&logo=gmail&logoColor=white&labelColor=555555)](mailto:mmmustafakamran@gmail.com)
+[![Portfolio](https://img.shields.io/badge/Portfolio-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://mustafakamran.vercel.app)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/mustafaKamran03)
+[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:mmmustafakamran@gmail.com)
 
 </div>

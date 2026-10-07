@@ -18,10 +18,8 @@ SRC = ROOT / "data" / "contributions.json"
 OUT = ROOT / "stats-card.svg"
 PORTRAIT = ROOT / "ascii-portrait.svg"
 
-USER_HOST = "mustafa@github"
 
 BG = "#0d1117"
-BAR = "#161b22"
 TILE = "#111821"
 BORDER = "#30363d"
 FG = "#e6edf3"
@@ -30,7 +28,6 @@ ACCENT = "#39d353"
 BAR_FILL = "#26a641"
 BAR_TOP = "#69f0a0"
 
-TITLE_H = 30
 PAD = 20
 GAP = 14
 TILE_H = 112
@@ -101,21 +98,13 @@ def build(data: dict) -> str:
     out += [
         "</style>",
         f'<rect x=".5" y=".5" width="{w - 1:g}" height="{h - 1:g}" rx="10" fill="{BG}" stroke="{BORDER}"/>',
-        f'<path d="M.5 {TITLE_H}V10.5a10 10 0 0 1 10-10h{w - 21:g}a10 10 0 0 1 10 10V{TITLE_H}z" fill="{BAR}"/>',
-        f'<line x1=".5" y1="{TITLE_H}" x2="{w - .5:g}" y2="{TITLE_H}" stroke="{BORDER}"/>',
     ]
-    for i, c in enumerate(["#ff5f56", "#ffbd2e", "#27c93f"]):
-        out.append(f'<circle cx="{18 + i * 16}" cy="{TITLE_H / 2}" r="5" fill="{c}"/>')
-    out.append(
-        f'<text x="{w / 2:g}" y="{TITLE_H / 2 + 4}" text-anchor="middle" style="font-size:11px;fill:{MUTED}">'
-        f"{USER_HOST}: ~ ./stats.sh</text>"
-    )
 
     def delay(k: int) -> str:
         return "" if STATIC else f' style="animation-delay:{START + k * STAGGER:.2f}s"'
 
     tw = (w - 2 * PAD - GAP) / 2
-    y0 = TITLE_H + PAD
+    y0 = PAD
     for k, (label, num, unit, sub, hot) in enumerate(tiles):
         x = PAD + (k % 2) * (tw + GAP)
         y = y0 + (k // 2) * (TILE_H + GAP)
