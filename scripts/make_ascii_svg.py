@@ -48,8 +48,8 @@ EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
 BLINK_EVERY = 1.2  # seconds between blinks
 
 # Morph loop: face -> scene -> face, forever (seconds).
-FACE_HOLD = 4.0
-SCENE_HOLD = 3.0
+FACE_HOLD = 7.0
+SCENE_HOLD = 6.0
 MORPH_DUR = 1.0
 MORPH_FRAMES = 5
 SCRAMBLE = "#%&$?@*+=/<>"
