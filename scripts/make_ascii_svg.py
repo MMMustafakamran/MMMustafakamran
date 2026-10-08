@@ -1,5 +1,5 @@
 """Convert the prepped image into a monochrome ASCII-art SVG that "types" itself in,
-then loops: blink, morph into the coding scene (typing + coffee steam), and back.
+then loops: blink, morph into the coding scene (coffee steam), and back.
 
 Each row is revealed by a left-to-right clip wipe with a block cursor riding the edge,
 staggered top to bottom. Plays once and freezes (SMIL, so GitHub's <img> renders it).
@@ -21,7 +21,6 @@ OUT = ROOT / "ascii-portrait.svg"
 SCENE_SRC = ROOT / "source-coding-prepped.png"  # second art the portrait morphs into
 SCENE_DIM_BOX = (0.68, 0.5)  # (x, y) grid fractions: right/bottom area where the laptop sits
 # Boxes in scene-image pixels (x0, y0, x1, y1).
-SCENE_HAND = (560, 860, 700, 950)  # fingers on the keyboard
 SCENE_MUG = (300, 900, 468, 1050)  # coffee mug (top edge = rim)
 
 RAMP = " .`:-=+*cs#%@"  # bright (sparse) -> dark (dense); leading space clears the background
@@ -275,36 +274,9 @@ def grid_text(grid: list[str], art_y: float) -> list[str]:
     ]
 
 
-def cells_text(col: int, row: int, text: str, art_y: float) -> str:
-    """A run of glyphs placed exactly on the grid, with a background patch under it."""
-    x, y, n = PAD + col * CHAR_W, art_y + row * LINE_H, len(text)
-    return (
-        f'<rect x="{x:g}" y="{y:g}" width="{n * CHAR_W:g}" height="{LINE_H:g}" fill="{BG}"/>'
-        f'<text x="{x:g}" y="{y + LINE_H * 0.8:g}" textLength="{n * CHAR_W:g}" '
-        f'lengthAdjust="spacingAndGlyphs">{shade(text)}</text>'
-    )
-
-
 def scene_fx(scene: list[str], scene_cell, art_y: float) -> list[str]:
-    """Typing fingers and steam rising from the coffee, both in glyphs."""
+    """Steam rising from the coffee, in glyphs."""
     out = []
-
-    # Typing: alternate rows of the hand twitch one cell left/right in an uneven rhythm.
-    c0, r0 = scene_cell(SCENE_HAND[0], SCENE_HAND[1])
-    c1, r1 = scene_cell(SCENE_HAND[2], SCENE_HAND[3])
-    rhythm = [0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0]  # 1 = fingers down on a key
-    for k, r in enumerate(range(r0, r1)):
-        seg = scene[r][c0:c1]
-        if not seg.strip():
-            continue
-        shift = 1 if k % 2 else -1
-        moved = (seg[1:] + " ") if shift < 0 else (" " + seg[:-1])
-        vals = ";".join(str(v) for v in (rhythm[k % 3:] + rhythm[:k % 3]))
-        out.append(
-            f'<g opacity="0">{cells_text(c0, r, moved, art_y)}'
-            f'<animate attributeName="opacity" values="{vals}" calcMode="discrete" dur="1.3s" '
-            f'repeatCount="indefinite"/></g>'
-        )
 
     # Steam: three wisps of ( ) ~ glyphs curl upward from the rim and fade out.
     m0, rim = scene_cell(SCENE_MUG[0], SCENE_MUG[1])
