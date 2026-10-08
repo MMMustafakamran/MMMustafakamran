@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "source-prepped.png"
 OUT = ROOT / "ascii-portrait.svg"
 SCENE_SRC = ROOT / "source-coding-prepped.png"  # second art the portrait morphs into
+SCENE_DIM_BOX = (0.68, 0.5)  # (x, y) grid fractions: right/bottom area where the laptop sits
 
 RAMP = " .`:-=+*cs#%@"  # bright (sparse) -> dark (dense); leading space clears the background
 COLS = 120
@@ -294,7 +295,14 @@ def scene_grid(n_rows: int) -> list[str]:
     lines = [" " * side + line + " " * (COLS - cols - side) for line in lines]
     top = (n_rows - len(lines)) // 2
     blank = " " * COLS
-    return [blank] * top + lines + [blank] * (n_rows - len(lines) - top)
+    grid = [blank] * top + lines + [blank] * (n_rows - len(lines) - top)
+    # The laptop's lit edge is the brightest thing in the picture and prints as a
+    # glaring white "@" streak; flatten it to the lid's own glyph.
+    x0, y0 = SCENE_DIM_BOX[0] * COLS, SCENE_DIM_BOX[1] * n_rows
+    return [
+        "".join("*" if ch in "@%" and c >= x0 and r >= y0 else ch for c, ch in enumerate(line))
+        for r, line in enumerate(grid)
+    ]
 
 
 def morph_frames(a: list[str], b: list[str]) -> list[list[str]]:
