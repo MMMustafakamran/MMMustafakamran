@@ -10,7 +10,6 @@ import os
 import random
 from pathlib import Path
 
-import cv2
 import numpy as np
 from PIL import Image
 
@@ -22,7 +21,6 @@ SCENE_SRC = ROOT / "source-coding-prepped.png"  # second art the portrait morphs
 RAMP = " .`:-=+*cs#%@"  # bright (sparse) -> dark (dense); leading space clears the background
 COLS = 120
 SHADES = [".55", ".6", ".78", "1"]  # glyph opacity per density band, sparse -> dense
-HAIR_MAX = 70  # cells darker than this (0-255) can count as hair
 GAMMA = 1.0  # <1 lightens mid-tones (sparser skin, outlines pop), >1 darkens them
 LINE_WEIGHT = 0.5  # 0..1: how much each cell's darkest pixels count (keeps thin outlines)
 POSITIVE = True  # bright -> dense (reads like the source); False = classic negative look
@@ -61,16 +59,11 @@ FOOTER = [
 
 # Boxes in source-image pixels (x0, y0, x1, y1), mapped onto the character grid.
 EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
-BLINK_EVERY = 3.0  # seconds between blinks
-WIND_CELLS = 2  # how far (in characters) the crown of the hair gets pushed
-WIND_PERIOD = 1.4  # seconds per gust
-WIND_LAG = 0.04  # delay per row, so each gust ripples down through the hair
-HAIR_GLYPHS = "`:-="  # glyphs the wind may move
-WIND_BROW_GAP = 6  # rows above the eyes where the moving hair stops (keeps eyebrows still)
+BLINK_EVERY = 2.0  # seconds between blinks
 
 # Morph loop: face -> scene -> face, forever (seconds).
-FACE_HOLD = 8.0
-SCENE_HOLD = 5.0
+FACE_HOLD = 4.0
+SCENE_HOLD = 3.0
 MORPH_DUR = 1.0
 MORPH_FRAMES = 5
 SCRAMBLE = "#%&$?@*+=/<>"
@@ -91,7 +84,7 @@ def dark_pool(arr: np.ndarray, cols: int, rows: int) -> np.ndarray:
 
 
 def load_grid(src: Path = SRC, crop_bottom: float = CROP_BOTTOM, cols: int = COLS
-              ) -> tuple[list[str], callable, np.ndarray]:
+              ) -> tuple[list[str], callable]:
     img = Image.open(src).convert("L")
     arr = np.asarray(img, dtype=np.float32)
     subject = arr < 250  # the prep step composited the background to pure white
@@ -124,13 +117,8 @@ def load_grid(src: Path = SRC, crop_bottom: float = CROP_BOTTOM, cols: int = COL
         mask = np.asarray(Image.fromarray(subject.astype(np.uint8) * 255).resize((cols, rows), Image.Resampling.BOX))
         idx = 2 + (small / 256.0 * (len(RAMP) - 2)).astype(int).clip(0, len(RAMP) - 3)
         idx = np.where(mask > 127, idx, 0)
-        # Hair = large dark areas of the subject. Opening drops 1-cell-wide outlines
-        # (jaw, glasses, nose) so only real hair gets the wind.
-        hair = ((mask > 127) & (small < HAIR_MAX)).astype(np.uint8)
-        hair = cv2.morphologyEx(hair, cv2.MORPH_OPEN, np.ones((2, 3), np.uint8)).astype(bool)
     else:
         idx = ((255.0 - small) / 256.0 * len(RAMP)).astype(int).clip(0, len(RAMP) - 1)
-        hair = np.zeros(idx.shape, bool)
     lines = ["".join(RAMP[i] for i in row) for row in idx]
     # Trim blank rows top and bottom so the portrait sits snug in its frame.
     top = 0
@@ -146,7 +134,7 @@ def load_grid(src: Path = SRC, crop_bottom: float = CROP_BOTTOM, cols: int = COL
         row = (y - y0) / (y1 - y0) * rows - top
         return round(col), round(row)
 
-    return lines, to_cell, hair[top:top + len(lines)]
+    return lines, to_cell
 
 
 def esc(s: str) -> str:
@@ -260,56 +248,6 @@ def footer(w: float, foot_y: float, done: float, font: str) -> list[str]:
     return out
 
 
-def wind(lines: list[str], hair, to_cell, done: float) -> tuple[list[str], dict[int, list[str]]]:
-    """Hair strands flutter in the wind, in whole-character steps.
-
-    Every run of hair glyphs above the eyebrows becomes its own piece that is pushed
-    sideways and springs back. The crown moves most; strands by the forehead and temples
-    move a cell. Each strand gets its own timing, so the hair ripples instead of sliding.
-    Returns (rows with the moving strands blanked out, {row: [strand <text> elements]}).
-    """
-    rng = random.Random(11)  # fixed seed: same output every run
-    brow = min(to_cell(x0, y0)[1] for x0, y0, _, _ in EYES) - WIND_BROW_GAP
-    face_top = next(
-        (r for r, line in enumerate(lines) if sum(line.count(c) for c in "s#%@c*") >= 8), brow
-    )
-    base = list(lines)
-
-    def is_hair(r: int, c: int) -> bool:
-        # Only the sparse hair glyphs move; skin and feature glyphs never do.
-        return bool(hair[r][c]) and lines[r][c] in HAIR_GLYPHS
-
-    strands: dict[int, list[str]] = {}
-    steps = 10
-    for r in range(max(min(brow, len(lines)), 0)):
-        amp = WIND_CELLS if r < face_top * 0.6 else 1
-        row = list(base[r])
-        c = 0
-        while c < len(row):
-            if not is_hair(r, c):
-                c += 1
-                continue
-            start = c
-            while c < len(row) and is_hair(r, c):
-                c += 1
-            if c - start < 2:
-                continue
-            seg = "".join(row[start:c])
-            row[start:c] = " " * (c - start)
-            # Gust shape: push out, flutter, settle; each strand slightly out of step.
-            shape = [0, 1, 1, .6, 1, .4, 0, .5, 0, 0]
-            offs = [round(amp * v) for v in shape]
-            begin = done + r * WIND_LAG + rng.uniform(0, WIND_PERIOD * .25)
-            vals = ";".join(f"{o * CHAR_W:g} 0" for o in offs)
-            strands.setdefault(r, []).append((start, seg, (
-                f'<animateTransform attributeName="transform" type="translate" values="{vals}" '
-                f'calcMode="discrete" dur="{WIND_PERIOD * rng.uniform(.9, 1.1):.2f}s" '
-                f'begin="{begin:.2f}s" repeatCount="indefinite"/>'
-            )))
-        base[r] = "".join(row)
-    return base, strands
-
-
 def face_fx(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
     """Looping blink: the eye glyphs swap to closed lids for a moment."""
     if STATIC:
@@ -348,7 +286,7 @@ def scene_grid(n_rows: int) -> list[str]:
     """The second art on the same COLS x n_rows grid as the face, centred."""
     cols = COLS
     while True:
-        lines, _, _ = load_grid(SCENE_SRC, 1.0, cols)
+        lines, _ = load_grid(SCENE_SRC, 1.0, cols)
         if len(lines) <= n_rows:
             break
         cols -= 2
@@ -414,7 +352,7 @@ def grid_text(grid: list[str], art_y: float) -> list[str]:
     ]
 
 
-def build(lines: list[str], to_cell, hair) -> str:
+def build(lines: list[str], to_cell) -> str:
     text_w = COLS * CHAR_W
     w = text_w + 2 * PAD
     art_y = TITLE_H + PAD
@@ -449,23 +387,17 @@ def build(lines: list[str], to_cell, hair) -> str:
             )
         out.append("</defs>")
 
-    rows, strands = (lines, {}) if STATIC else wind(lines, hair, to_cell, done)
     # One loop: face hold, morph to the scene, scene hold, morph back.
     cycle = FACE_HOLD + 2 * MORPH_DUR + SCENE_HOLD
     out.append("<g>" if STATIC else group([(0, FACE_HOLD)], cycle, done, True))
     out.append(f'<g font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}">')
-    for i, line in enumerate(rows):
+    for i, line in enumerate(lines):
         baseline = art_y + i * LINE_H + LINE_H * 0.8
         clip = "" if STATIC else f' clip-path="url(#r{i})"'
         out.append(
             f'<text x="{PAD}" y="{baseline:g}" textLength="{text_w:g}" '
             f'lengthAdjust="spacingAndGlyphs"{clip}>{shade(line)}</text>'
         )
-        for start, seg, anim in strands.get(i, []):
-            out.append(
-                f'<text x="{PAD + start * CHAR_W:g}" y="{baseline:g}" textLength="{len(seg) * CHAR_W:g}" '
-                f'lengthAdjust="spacingAndGlyphs"{clip}>{shade(seg)}{anim}</text>'
-            )
     out.append("</g>")
 
     if not STATIC:
@@ -509,8 +441,8 @@ def build(lines: list[str], to_cell, hair) -> str:
 
 
 def main() -> None:
-    lines, to_cell, hair = load_grid()
-    OUT.write_text(build(lines, to_cell, hair), encoding="utf-8")
+    lines, to_cell = load_grid()
+    OUT.write_text(build(lines, to_cell), encoding="utf-8")
     print(f"wrote {OUT.name} ({COLS}x{len(lines)} chars)")
 
 
