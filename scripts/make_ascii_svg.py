@@ -60,7 +60,7 @@ FOOTER = [
 
 # Boxes in source-image pixels (x0, y0, x1, y1), mapped onto the character grid.
 EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
-BLINK_EVERY = 2.0  # seconds between blinks
+BLINK_EVERY = 1.2  # seconds between blinks
 
 # Morph loop: face -> scene -> face, forever (seconds).
 FACE_HOLD = 4.0
