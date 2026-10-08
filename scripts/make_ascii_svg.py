@@ -17,6 +17,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "source-prepped.png"
 OUT = ROOT / "ascii-portrait.svg"
+SCENE_SRC = ROOT / "source-coding-prepped.png"  # second art the portrait morphs into
 
 RAMP = " .`:-=+*cs#%@"  # bright (sparse) -> dark (dense); leading space clears the background
 COLS = 120
@@ -67,6 +68,13 @@ WIND_LAG = 0.04  # delay per row, so each gust ripples down through the hair
 HAIR_GLYPHS = "`:-="  # glyphs the wind may move
 WIND_BROW_GAP = 6  # rows above the eyes where the moving hair stops (keeps eyebrows still)
 
+# Morph loop: face -> scene -> face, forever (seconds).
+FACE_HOLD = 8.0
+SCENE_HOLD = 5.0
+MORPH_DUR = 1.0
+MORPH_FRAMES = 5
+SCRAMBLE = "#%&$?@*+=/<>"
+
 STATIC = os.environ.get("STATIC") == "1"
 
 
@@ -82,8 +90,9 @@ def dark_pool(arr: np.ndarray, cols: int, rows: int) -> np.ndarray:
     return out
 
 
-def load_grid() -> tuple[list[str], callable, np.ndarray]:
-    img = Image.open(SRC).convert("L")
+def load_grid(src: Path = SRC, crop_bottom: float = CROP_BOTTOM, cols: int = COLS
+              ) -> tuple[list[str], callable, np.ndarray]:
+    img = Image.open(src).convert("L")
     arr = np.asarray(img, dtype=np.float32)
     subject = arr < 250  # the prep step composited the background to pure white
 
@@ -92,7 +101,7 @@ def load_grid() -> tuple[list[str], callable, np.ndarray]:
     m = 6
     y0, y1 = max(ys.min() - m, 0), min(ys.max() + m, arr.shape[0])
     x0, x1 = max(xs.min() - m, 0), min(xs.max() + m, arr.shape[1])
-    y1 = y0 + round((y1 - y0) * CROP_BOTTOM)
+    y1 = y0 + round((y1 - y0) * crop_bottom)
     arr, subject = arr[y0:y1, x0:x1], subject[y0:y1, x0:x1]
 
     # Stretch the subject's own tonal range to the full ramp; keep the background white.
@@ -101,18 +110,18 @@ def load_grid() -> tuple[list[str], callable, np.ndarray]:
     arr = np.where(subject, stretched, 255.0)
 
     # Character cells are taller than wide, so sample fewer rows than columns.
-    rows = round(COLS * (arr.shape[0] / arr.shape[1]) * (CHAR_W / LINE_H))
+    rows = round(cols * (arr.shape[0] / arr.shape[1]) * (CHAR_W / LINE_H))
     img = Image.fromarray(arr.astype(np.uint8), "L")
-    small = np.asarray(img.resize((COLS, rows), Image.Resampling.BOX), dtype=np.float32)
+    small = np.asarray(img.resize((cols, rows), Image.Resampling.BOX), dtype=np.float32)
     if LINE_WEIGHT:
         # Thin dark outlines vanish when a whole cell is averaged; mix in each cell's darkest
         # pixel so line art (glasses, eyes, jaw) survives the downsample.
-        small = small * (1 - LINE_WEIGHT) + dark_pool(arr, COLS, rows) * LINE_WEIGHT
+        small = small * (1 - LINE_WEIGHT) + dark_pool(arr, cols, rows) * LINE_WEIGHT
     if POSITIVE:
         # Light text on a dark terminal: bright areas print dense, so it reads like the
         # original. The subject's darkest areas still get a faint glyph (not a space)
         # so dark hair keeps its silhouette.
-        mask = np.asarray(Image.fromarray(subject.astype(np.uint8) * 255).resize((COLS, rows), Image.Resampling.BOX))
+        mask = np.asarray(Image.fromarray(subject.astype(np.uint8) * 255).resize((cols, rows), Image.Resampling.BOX))
         idx = 2 + (small / 256.0 * (len(RAMP) - 2)).astype(int).clip(0, len(RAMP) - 3)
         idx = np.where(mask > 127, idx, 0)
         # Hair = large dark areas of the subject. Opening drops 1-cell-wide outlines
@@ -133,7 +142,7 @@ def load_grid() -> tuple[list[str], callable, np.ndarray]:
 
     def to_cell(x: float, y: float) -> tuple[int, int]:
         """Source-image pixel -> (col, row) in the trimmed grid."""
-        col = (x - x0) / (x1 - x0) * COLS
+        col = (x - x0) / (x1 - x0) * cols
         row = (y - y0) / (y1 - y0) * rows - top
         return round(col), round(row)
 
@@ -153,7 +162,12 @@ def shade(line: str) -> str:
     bands = len(SHADES)
     parts, run, run_band = [], "", None
     for ch in line:
-        band = None if ch == " " else min(RAMP.index(ch) * bands // len(RAMP), bands - 1)
+        if ch == " ":
+            band = None
+        elif ch in RAMP:
+            band = min(RAMP.index(ch) * bands // len(RAMP), bands - 1)
+        else:
+            band = bands - 1  # scramble glyphs (/ ? & etc.) print at full brightness
         if run and band != run_band and not (ch == " " and run_band is None):
             parts.append((run_band, run))
             run = ""
@@ -330,6 +344,76 @@ def face_fx(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
     return out
 
 
+def scene_grid(n_rows: int) -> list[str]:
+    """The second art on the same COLS x n_rows grid as the face, centred."""
+    cols = COLS
+    while True:
+        lines, _, _ = load_grid(SCENE_SRC, 1.0, cols)
+        if len(lines) <= n_rows:
+            break
+        cols -= 2
+    side = (COLS - cols) // 2
+    lines = [" " * side + line + " " * (COLS - cols - side) for line in lines]
+    top = (n_rows - len(lines)) // 2
+    blank = " " * COLS
+    return [blank] * top + lines + [blank] * (n_rows - len(lines) - top)
+
+
+def morph_frames(a: list[str], b: list[str]) -> list[list[str]]:
+    """In-between grids from a to b: a diagonal front sweeps across; cells just behind
+    it show scrambled glyphs, cells past it show b."""
+    rng = random.Random(5)
+    rows, cols = len(a), len(a[0])
+    span = cols + 2 * rows
+    order = [[(c + 2 * r) / span * 0.8 + rng.uniform(0, 0.2) for c in range(cols)] for r in range(rows)]
+    band = 0.18
+    frames = []
+    for j in range(1, MORPH_FRAMES + 1):
+        p = j / (MORPH_FRAMES + 1) * (1 + band)
+        grid = []
+        for r in range(rows):
+            row = []
+            for c in range(cols):
+                o = order[r][c]
+                if o < p - band:
+                    row.append(b[r][c])
+                elif o < p and (a[r][c] != " " or b[r][c] != " "):
+                    row.append(rng.choice(SCRAMBLE))
+                else:
+                    row.append(a[r][c])
+            grid.append("".join(row))
+        frames.append(grid)
+    return frames
+
+
+def group(windows: list[tuple[float, float]], cycle: float, begin: float, initially: bool,
+          attrs: str = "") -> str:
+    """Opening <g> tag (plus its animation) that is visible only inside the given
+    (start, end) windows of each cycle. Close it with "</g>"."""
+    events = [(0.0, 0.0)]
+    for t0, t1 in windows:
+        events += [(t0, 1.0), (t1, 0.0)]
+    steps: dict[float, float] = {}
+    for t, v in events:
+        steps[round(t / cycle, 4)] = v
+    keys = sorted(k for k in steps if k < 1)
+    vals = ";".join(f"{steps[k]:g}" for k in keys)
+    return (
+        f'<g{attrs} opacity="{1 if initially else 0}"><animate attributeName="opacity" values="{vals}" '
+        f'keyTimes="{";".join(f"{k:g}" for k in keys)}" calcMode="discrete" dur="{cycle:.2f}s" '
+        f'begin="{begin:.2f}s" repeatCount="indefinite"/>'
+    )
+
+
+def grid_text(grid: list[str], art_y: float) -> list[str]:
+    text_w = COLS * CHAR_W
+    return [
+        f'<text x="{PAD}" y="{art_y + i * LINE_H + LINE_H * 0.8:g}" textLength="{text_w:g}" '
+        f'lengthAdjust="spacingAndGlyphs">{shade(line)}</text>'
+        for i, line in enumerate(grid) if line.strip()
+    ]
+
+
 def build(lines: list[str], to_cell, hair) -> str:
     text_w = COLS * CHAR_W
     w = text_w + 2 * PAD
@@ -366,6 +450,9 @@ def build(lines: list[str], to_cell, hair) -> str:
         out.append("</defs>")
 
     rows, strands = (lines, {}) if STATIC else wind(lines, hair, to_cell, done)
+    # One loop: face hold, morph to the scene, scene hold, morph back.
+    cycle = FACE_HOLD + 2 * MORPH_DUR + SCENE_HOLD
+    out.append("<g>" if STATIC else group([(0, FACE_HOLD)], cycle, done, True))
     out.append(f'<g font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}">')
     for i, line in enumerate(rows):
         baseline = art_y + i * LINE_H + LINE_H * 0.8
@@ -396,6 +483,25 @@ def build(lines: list[str], to_cell, hair) -> str:
         out.append("</g>")
 
     out += face_fx(lines, to_cell, art_y, done)
+    out.append("</g>")  # end of the face group
+
+    if not STATIC:
+        scene = scene_grid(len(lines))
+        frames = morph_frames(lines, scene)
+        dt = MORPH_DUR / len(frames)
+        t_scene = FACE_HOLD + MORPH_DUR
+        t_back = t_scene + SCENE_HOLD
+        layer = f' font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}"'
+        out.append(group([(t_scene, t_back)], cycle, done, False, layer))
+        out += grid_text(scene, art_y)
+        out.append("</g>")
+        for j, frame in enumerate(frames):
+            windows = [(FACE_HOLD + j * dt, FACE_HOLD + (j + 1) * dt),
+                       (t_back + (len(frames) - 1 - j) * dt, t_back + (len(frames) - j) * dt)]
+            out.append(group(windows, cycle, done, False, layer))
+            out += grid_text(frame, art_y)
+            out.append("</g>")
+
     out += footer(w, foot_y, done, font)
 
     out.append("</svg>")

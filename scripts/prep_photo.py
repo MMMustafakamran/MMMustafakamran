@@ -9,6 +9,8 @@
 
 Usage: python scripts/prep_photo.py source-photo.png [out.png]
        python scripts/prep_photo.py --flat source-cartoon.png [out.png]
+       KEY_TOL=20 python scripts/prep_photo.py --flat source-coding.jpg source-coding-prepped.png
+         (lower KEY_TOL when dark hair is close to the background color)
 """
 import os
 import sys
@@ -59,10 +61,10 @@ def flat_alpha(rgb: np.ndarray, n_colors: int = 2, tol: float = 34.0) -> np.ndar
     subject |= 1 - filled
     # Drop hairline leftovers, e.g. the anti-aliased rim between two background colors.
     subject = cv2.morphologyEx(subject, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
-    # Keep only the largest blob and soften its edge a touch.
+    # Keep every substantial blob (a head can separate from the body) and soften edges.
     n, labels, stats, _ = cv2.connectedComponentsWithStats(subject, connectivity=8)
-    keep = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-    mask = (labels == keep).astype(np.float32)
+    keep = [i for i in range(1, n) if stats[i, cv2.CC_STAT_AREA] >= 0.01 * subject.size]
+    mask = np.isin(labels, keep).astype(np.float32)
     return cv2.GaussianBlur(mask, (3, 3), 0)
 
 
@@ -88,7 +90,7 @@ def main() -> None:
 
     img = Image.open(src).convert("RGB")
     rgb = np.array(img)
-    alpha = flat_alpha(rgb) if flat else rembg_alpha(img)
+    alpha = flat_alpha(rgb, tol=float(os.environ.get("KEY_TOL", "34"))) if flat else rembg_alpha(img)
 
     gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
     if flat:
