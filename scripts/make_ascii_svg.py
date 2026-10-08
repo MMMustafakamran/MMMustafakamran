@@ -21,7 +21,7 @@ OUT = ROOT / "ascii-portrait.svg"
 SCENE_SRC = ROOT / "source-coding-prepped.png"  # second art the portrait morphs into
 SCENE_DIM_BOX = (0.68, 0.5)  # (x, y) grid fractions: right/bottom area where the laptop sits
 # Boxes in scene-image pixels (x0, y0, x1, y1).
-SCENE_HAND = (587, 766, 728, 861)  # fingers on the keyboard
+SCENE_HAND = (560, 860, 700, 950)  # fingers on the keyboard
 SCENE_MUG = (300, 900, 468, 1050)  # coffee mug (top edge = rim)
 
 RAMP = " .`:-=+*cs#%@"  # bright (sparse) -> dark (dense); leading space clears the background
