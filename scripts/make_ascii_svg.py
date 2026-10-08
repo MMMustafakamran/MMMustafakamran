@@ -1,4 +1,5 @@
-"""Convert the prepped image into a monochrome ASCII-art SVG that "types" itself in.
+"""Convert the prepped image into a monochrome ASCII-art SVG that "types" itself in,
+then loops: blink, morph into the coding scene (typing + coffee steam), and back.
 
 Each row is revealed by a left-to-right clip wipe with a block cursor riding the edge,
 staggered top to bottom. Plays once and freezes (SMIL, so GitHub's <img> renders it).
@@ -34,14 +35,7 @@ FONT_SIZE = 8.4
 CHAR_W = 5.0  # forced via textLength, so the grid stays aligned in any monospace font
 LINE_H = 10.0
 PAD = 24
-TITLE_H = 30
-FOOT_H = 36
-USER_HOST = "mustafa@github"
-NAME = "Mustafa Kamran"
 BG = "#0d1117"
-BAR = "#161b22"
-MUTED = "#8b949e"
-ACCENT = "#39d353"
 BORDER = "#30363d"
 FG = "#c9d1d9"
 CURSOR = "#39d353"
@@ -49,18 +43,6 @@ CURSOR = "#39d353"
 ROW_DELAY = 0.04  # seconds between row starts
 ROW_DUR = 0.35  # seconds for one row's wipe
 START = 0.2
-PROMPT_CW = 7.2  # character width of the 12px footer prompt
-TYPE_CPS = 14  # footer typing speed, characters per second
-HOLD = 2.8  # seconds each footer command's output stays up
-
-# Footer commands, cycled forever: (command, output). Edit freely.
-FOOTER = [
-    ("whoami", "Mustafa Kamran"),
-    ("cat now.txt", "building agentic AI apps"),
-    ("echo $STACK", "TypeScript · React · Python · AWS"),
-    ("uptime", "shipping code since 2022"),
-    ("echo $COFFEE", "∞"),
-]
 
 # Boxes in source-image pixels (x0, y0, x1, y1), mapped onto the character grid.
 EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
@@ -173,84 +155,6 @@ def shade(line: str) -> str:
         esc(text) if band is None else f'<tspan fill-opacity="{SHADES[band]}">{esc(text)}</tspan>'
         for band, text in parts
     )
-
-
-def discrete(events: list[tuple[float, float]], cycle: float) -> tuple[str, str]:
-    """(time, value) steps within one cycle -> SMIL values/keyTimes for calcMode=discrete."""
-    steps: dict[float, float] = {}
-    for t, v in events:
-        steps[round(min(max(t / cycle, 0), 1), 4)] = v
-    steps.setdefault(0.0, events[0][1])
-    keys = sorted(steps)
-    return ";".join(f"{steps[k]:g}" for k in keys), ";".join(f"{k:g}" for k in keys)
-
-
-def footer(w: float, foot_y: float, done: float, font: str) -> list[str]:
-    """Prompt line that types a command, prints its output, clears, and moves to the next."""
-    out = [f'<line x1="{PAD / 2:g}" y1="{foot_y:g}" x2="{w - PAD / 2:g}" y2="{foot_y:g}" stroke="{BORDER}"/>']
-    py = foot_y + FOOT_H / 2 + 4
-    user, host = USER_HOST.split("@")
-    prompt = f"{USER_HOST}:~$ "
-    px = PAD + len(prompt) * PROMPT_CW
-    out.append(
-        f'<text x="{PAD}" y="{py:g}" font-family="{font}" font-size="12" '
-        f'textLength="{len(prompt.rstrip()) * PROMPT_CW:g}" lengthAdjust="spacingAndGlyphs">'
-        f'<tspan fill="{ACCENT}">{user}@{host}</tspan><tspan fill="{MUTED}">:~$</tspan></text>'
-    )
-
-    # Timeline of one full cycle through FOOTER.
-    items, t = [], 0.0
-    for cmd, result in FOOTER:
-        typed = len(cmd) / TYPE_CPS
-        items.append((t, cmd, result, typed))
-        t += typed + 0.35 + HOLD + 0.3
-    cycle = t
-
-    cursor = [(0.0, 0.0)]
-    for i, (t0, cmd, result, typed) in enumerate(items):
-        width = len(f"{cmd} {result}") * PROMPT_CW
-        shown = [(0.0, 0.0)]
-        for k in range(len(cmd) + 1):
-            shown.append((t0 + k / TYPE_CPS, k * PROMPT_CW))
-        shown.append((t0 + typed + 0.35, width))
-        shown.append((t0 + typed + 0.35 + HOLD, 0.0))
-        cursor += shown[1:]
-        attrs = ""
-        if not STATIC:
-            vals, keys = discrete(shown, cycle)
-            out.append(
-                f'<clipPath id="f{i}"><rect x="{px:g}" y="{foot_y:g}" width="0" height="{FOOT_H:g}">'
-                f'<animate attributeName="width" values="{vals}" keyTimes="{keys}" calcMode="discrete" '
-                f'dur="{cycle:.2f}s" begin="{done:.2f}s" repeatCount="indefinite"/></rect></clipPath>'
-            )
-            attrs = f' clip-path="url(#f{i})"'
-        elif i:
-            continue  # the static frame shows only the first command
-        out.append(
-            f'<text x="{px:g}" y="{py:g}" font-family="{font}" font-size="12" fill="{FG}" '
-            f'textLength="{width:g}" lengthAdjust="spacingAndGlyphs"{attrs}>{esc(cmd)} '
-            f'<tspan fill="#ffffff" font-weight="700">{esc(result)}</tspan></text>'
-        )
-
-    # Block cursor follows the typing and blinks the whole time.
-    first = len(f"{FOOTER[0][0]} {FOOTER[0][1]}") * PROMPT_CW
-    cx = px + 2
-    anim = ""
-    if STATIC:
-        cx += first
-    else:
-        vals, keys = discrete(cursor, cycle)
-        xs = ";".join(f"{float(v) + cx:g}" for v in vals.split(";"))
-        anim = (
-            f'<set attributeName="opacity" to="1" begin="{done:.2f}s"/>'
-            f'<animate attributeName="x" values="{xs}" keyTimes="{keys}" calcMode="discrete" '
-            f'dur="{cycle:.2f}s" begin="{done:.2f}s" repeatCount="indefinite"/>'
-            f'<animate attributeName="fill-opacity" values="1;1;0;0" keyTimes="0;.5;.5;1" dur="1.1s" '
-            f'begin="{done:.2f}s" repeatCount="indefinite"/>'
-        )
-    hidden = "" if STATIC else ' opacity="0"'
-    out.append(f'<rect x="{cx:g}" y="{py - 11:g}" width="7.5" height="14" fill="{FG}"{hidden}>{anim}</rect>')
-    return out
 
 
 def face_fx(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
@@ -435,25 +339,15 @@ def scene_fx(scene: list[str], scene_cell, art_y: float) -> list[str]:
 def build(lines: list[str], to_cell) -> str:
     text_w = COLS * CHAR_W
     w = text_w + 2 * PAD
-    art_y = TITLE_H + PAD
-    foot_y = art_y + len(lines) * LINE_H + PAD * 0.6
-    h = foot_y + FOOT_H
+    art_y = PAD
+    h = art_y + len(lines) * LINE_H + PAD
     done = START + (len(lines) - 1) * ROW_DELAY + ROW_DUR  # when the portrait finishes
     font = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace"
 
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:g}" height="{h:g}" viewBox="0 0 {w:g} {h:g}">',
         f'<rect x=".5" y=".5" width="{w - 1:g}" height="{h - 1:g}" rx="10" fill="{BG}" stroke="{BORDER}"/>',
-        # Terminal title bar.
-        f'<path d="M.5 {TITLE_H}V10.5a10 10 0 0 1 10-10h{w - 21:g}a10 10 0 0 1 10 10V{TITLE_H}z" fill="{BAR}"/>',
-        f'<line x1=".5" y1="{TITLE_H}" x2="{w - .5:g}" y2="{TITLE_H}" stroke="{BORDER}"/>',
     ]
-    for i, c in enumerate(["#ff5f56", "#ffbd2e", "#27c93f"]):
-        out.append(f'<circle cx="{18 + i * 16}" cy="{TITLE_H / 2}" r="5" fill="{c}"/>')
-    out.append(
-        f'<text x="{w / 2:g}" y="{TITLE_H / 2 + 4}" text-anchor="middle" font-family="{font}" '
-        f'font-size="11" fill="{MUTED}">{USER_HOST}: ~ ./portrait.sh</text>'
-    )
 
     if not STATIC:
         out.append("<defs>")
@@ -515,7 +409,6 @@ def build(lines: list[str], to_cell) -> str:
             out += grid_text(frame, art_y)
             out.append("</g>")
 
-    out += footer(w, foot_y, done, font)
 
     out.append("</svg>")
     return "\n".join(out)
