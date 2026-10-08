@@ -6,6 +6,7 @@ staggered top to bottom. Plays once and freezes (SMIL, so GitHub's <img> renders
 Usage: python scripts/make_ascii_svg.py            # writes ascii-portrait.svg
        STATIC=1 python scripts/make_ascii_svg.py   # frozen frame, no animation
 """
+import math
 import os
 import random
 from pathlib import Path
@@ -18,6 +19,9 @@ SRC = ROOT / "source-prepped.png"
 OUT = ROOT / "ascii-portrait.svg"
 SCENE_SRC = ROOT / "source-coding-prepped.png"  # second art the portrait morphs into
 SCENE_DIM_BOX = (0.68, 0.5)  # (x, y) grid fractions: right/bottom area where the laptop sits
+# Boxes in scene-image pixels (x0, y0, x1, y1).
+SCENE_HAND = (587, 766, 728, 861)  # fingers on the keyboard
+SCENE_MUG = (300, 900, 468, 1050)  # coffee mug (top edge = rim)
 
 RAMP = " .`:-=+*cs#%@"  # bright (sparse) -> dark (dense); leading space clears the background
 COLS = 120
@@ -283,11 +287,12 @@ def face_fx(lines: list[str], to_cell, art_y: float, done: float) -> list[str]:
     return out
 
 
-def scene_grid(n_rows: int) -> list[str]:
-    """The second art on the same COLS x n_rows grid as the face, centred."""
+def scene_grid(n_rows: int) -> tuple[list[str], callable]:
+    """The second art on the same COLS x n_rows grid as the face, centred, plus a
+    scene-pixel -> (col, row) mapper for placing effects."""
     cols = COLS
     while True:
-        lines, _ = load_grid(SCENE_SRC, 1.0, cols)
+        lines, to_cell = load_grid(SCENE_SRC, 1.0, cols)
         if len(lines) <= n_rows:
             break
         cols -= 2
@@ -299,10 +304,16 @@ def scene_grid(n_rows: int) -> list[str]:
     # The laptop's lit edge is the brightest thing in the picture and prints as a
     # glaring white "@" streak; flatten it to the lid's own glyph.
     x0, y0 = SCENE_DIM_BOX[0] * COLS, SCENE_DIM_BOX[1] * n_rows
-    return [
+    grid = [
         "".join("*" if ch in "@%" and c >= x0 and r >= y0 else ch for c, ch in enumerate(line))
         for r, line in enumerate(grid)
     ]
+
+    def scene_cell(x: float, y: float) -> tuple[int, int]:
+        c, r = to_cell(x, y)
+        return c + side, r + top
+
+    return grid, scene_cell
 
 
 def morph_frames(a: list[str], b: list[str]) -> list[list[str]]:
@@ -358,6 +369,67 @@ def grid_text(grid: list[str], art_y: float) -> list[str]:
         f'lengthAdjust="spacingAndGlyphs">{shade(line)}</text>'
         for i, line in enumerate(grid) if line.strip()
     ]
+
+
+def cells_text(col: int, row: int, text: str, art_y: float) -> str:
+    """A run of glyphs placed exactly on the grid, with a background patch under it."""
+    x, y, n = PAD + col * CHAR_W, art_y + row * LINE_H, len(text)
+    return (
+        f'<rect x="{x:g}" y="{y:g}" width="{n * CHAR_W:g}" height="{LINE_H:g}" fill="{BG}"/>'
+        f'<text x="{x:g}" y="{y + LINE_H * 0.8:g}" textLength="{n * CHAR_W:g}" '
+        f'lengthAdjust="spacingAndGlyphs">{shade(text)}</text>'
+    )
+
+
+def scene_fx(scene: list[str], scene_cell, art_y: float) -> list[str]:
+    """Typing fingers and steam rising from the coffee, both in glyphs."""
+    out = []
+
+    # Typing: alternate rows of the hand twitch one cell left/right in an uneven rhythm.
+    c0, r0 = scene_cell(SCENE_HAND[0], SCENE_HAND[1])
+    c1, r1 = scene_cell(SCENE_HAND[2], SCENE_HAND[3])
+    rhythm = [0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0]  # 1 = fingers down on a key
+    for k, r in enumerate(range(r0, r1)):
+        seg = scene[r][c0:c1]
+        if not seg.strip():
+            continue
+        shift = 1 if k % 2 else -1
+        moved = (seg[1:] + " ") if shift < 0 else (" " + seg[:-1])
+        vals = ";".join(str(v) for v in (rhythm[k % 3:] + rhythm[:k % 3]))
+        out.append(
+            f'<g opacity="0">{cells_text(c0, r, moved, art_y)}'
+            f'<animate attributeName="opacity" values="{vals}" calcMode="discrete" dur="1.3s" '
+            f'repeatCount="indefinite"/></g>'
+        )
+
+    # Steam: three wisps of ( ) ~ glyphs curl upward from the rim and fade out.
+    m0, rim = scene_cell(SCENE_MUG[0], SCENE_MUG[1])
+    m1, _ = scene_cell(SCENE_MUG[2], SCENE_MUG[1])
+    height = 7
+    frames = 6
+    for w, base in enumerate((m0 + (m1 - m0) // 4, m0 + (m1 - m0) // 2, m0 + 3 * (m1 - m0) // 4)):
+        for f in range(frames):
+            glyphs = []
+            for h in range(1, height + 1):
+                phase = (h + f + w * 2) * 0.9
+                sway = round(1.2 * math.sin(phase))
+                ch = "(" if math.cos(phase) > 0.3 else ")" if math.cos(phase) < -0.3 else "~"
+                fade = max(0.15, 1 - h / (height + 1))
+                glyphs.append((base + sway, rim - h, ch, fade))
+            parts = "".join(
+                f'<rect x="{PAD + c * CHAR_W:g}" y="{art_y + r * LINE_H:g}" width="{CHAR_W:g}" '
+                f'height="{LINE_H:g}" fill="{BG}" fill-opacity="{a * .8:.2f}"/>'
+                f'<text x="{PAD + c * CHAR_W:g}" y="{art_y + r * LINE_H + LINE_H * .8:g}" '
+                f'fill="#ffffff" fill-opacity="{a:.2f}">{ch}</text>'
+                for c, r, ch, a in glyphs if 0 <= r < len(scene)
+            )
+            vals = ";".join("1" if i == f else "0" for i in range(frames))
+            out.append(
+                f'<g opacity="0">{parts}<animate attributeName="opacity" values="{vals}" '
+                f'calcMode="discrete" dur="{frames * 0.22:.2f}s" begin="{w * 0.3:.1f}s" '
+                f'repeatCount="indefinite"/></g>'
+            )
+    return out
 
 
 def build(lines: list[str], to_cell) -> str:
@@ -426,7 +498,7 @@ def build(lines: list[str], to_cell) -> str:
     out.append("</g>")  # end of the face group
 
     if not STATIC:
-        scene = scene_grid(len(lines))
+        scene, scene_cell = scene_grid(len(lines))
         frames = morph_frames(lines, scene)
         dt = MORPH_DUR / len(frames)
         t_scene = FACE_HOLD + MORPH_DUR
@@ -434,6 +506,7 @@ def build(lines: list[str], to_cell) -> str:
         layer = f' font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}"'
         out.append(group([(t_scene, t_back)], cycle, done, False, layer))
         out += grid_text(scene, art_y)
+        out += scene_fx(scene, scene_cell, art_y)
         out.append("</g>")
         for j, frame in enumerate(frames):
             windows = [(FACE_HOLD + j * dt, FACE_HOLD + (j + 1) * dt),
