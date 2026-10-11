@@ -1,17 +1,17 @@
 {
  "user": "MMMustafakamran",
- "fetched_at": "2026-10-10T12:28:24+00:00",
+ "fetched_at": "2026-10-11T12:45:52+00:00",
  "range": {
-  "start": "2025-10-05",
-  "end": "2026-10-10"
+  "start": "2025-10-12",
+  "end": "2026-10-11"
  },
  "stats": {
-  "total": 2083,
-  "active_days": 143,
-  "current_streak": 6,
+  "total": 2094,
+  "active_days": 145,
+  "current_streak": 8,
   "current_streak_range": [
    "2026-10-04",
-   "2026-10-09"
+   "2026-10-11"
   ],
   "longest_streak": 11,
   "longest_streak_range": [
@@ -35,45 +35,10 @@
    "2026-07": 340,
    "2026-08": 420,
    "2026-09": 861,
-   "2026-10": 106
+   "2026-10": 117
   }
  },
  "days": [
-  {
-   "date": "2025-10-05",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-10-06",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-10-07",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-10-08",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-10-09",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-10-10",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-10-11",
-   "count": 0,
-   "level": 0
-  },
   {
    "date": "2025-10-12",
    "count": 0,
@@ -1891,8 +1856,13 @@
   },
   {
    "date": "2026-10-10",
-   "count": 0,
-   "level": 0
+   "count": 1,
+   "level": 1
+  },
+  {
+   "date": "2026-10-11",
+   "count": 10,
+   "level": 1
   }
  ]
 }
