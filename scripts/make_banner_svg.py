@@ -33,7 +33,7 @@ SCENE_Y = 18
 
 # Loop.
 FRAMES = 120
-FPS = 6
+FPS = 3
 
 # Camera and world. World units are arbitrary; z runs away from the viewer.
 PERIOD = 12.0  # the heightfield repeats every PERIOD along z

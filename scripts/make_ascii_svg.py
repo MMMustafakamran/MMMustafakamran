@@ -42,10 +42,10 @@ FG = "#c9d1d9"
 CURSOR = "#39d353"
 
 START = 0.2  # noise silhouette appears
-DECODE_LEAD = 0.35  # noise-only time before the first letters settle
-DECODE_DUR = 2.6  # seconds over which letters settle
+DECODE_LEAD = 0.9  # noise-only time before the first letters settle
+DECODE_DUR = 6.5  # seconds over which letters settle
 DECODE_STEPS = 16  # timing groups
-FLICKER = 0.09  # seconds per noise glyph swap
+FLICKER = 0.12  # seconds per noise glyph swap
 NOISE = "#%&$?@*+=/<>"
 NOISE_FILL = "#39d353"
 
