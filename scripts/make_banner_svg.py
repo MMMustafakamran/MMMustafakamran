@@ -32,8 +32,8 @@ SCENE_X = (W - COLS * CELL_W) / 2
 SCENE_Y = 18
 
 # Loop.
-FRAMES = 48
-FPS = 7
+FRAMES = 120
+FPS = 6
 
 # Camera and world. World units are arbitrary; z runs away from the viewer.
 PERIOD = 12.0  # the heightfield repeats every PERIOD along z
@@ -47,7 +47,7 @@ VSCALE = 31.0  # rows per unit of height at z = 1
 Z_FAR = 12.0
 
 FOG = (2.2, 4.0, 7.0)  # depth where the colour band steps down
-BANDS = [PALETTE[2], PALETTE[3], PALETTE[4], PALETTE[5]]  # far -> near
+BANDS = [PALETTE[1], PALETTE[2], PALETTE[3], PALETTE[4]]  # far -> near, kept dim so the motion stays in the background
 
 # Caption.
 CAP_FONT = 13
