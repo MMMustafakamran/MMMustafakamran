@@ -10,20 +10,12 @@ import os
 from datetime import date, timedelta
 from pathlib import Path
 
+from theme import ACCENT, FG, FONT, MUTED, PAD, PALETTE, W, frame
+
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "data" / "contributions.json"
 OUT = ROOT / "contrib-heatmap.svg"
 
-PALETTE = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353", "#69f0a0"]
-#          none -> brightest (level 5 is a neon top end for standout days)
-BG = "#0d1117"
-BORDER = "#30363d"
-FG = "#c9d1d9"
-MUTED = "#8b949e"
-ACCENT = "#39d353"
-
-W = 860
-PAD = 24
 LABEL_W = 30  # room for Mon/Wed/Fri
 TOP = 58  # header + month labels
 GAP = 3
@@ -66,8 +58,7 @@ def build(data: dict) -> str:
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{h}" viewBox="0 0 {W} {h}">',
         "<style>",
-        "text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;"
-        f"font-size:11px;fill:{MUTED}}}",
+        f"text{{font-family:{FONT};font-size:11px;fill:{MUTED}}}",
         f".h{{font-size:13px;fill:{FG}}} .a{{fill:{ACCENT};font-weight:700}}",
     ]
     if not STATIC:
@@ -79,7 +70,7 @@ def build(data: dict) -> str:
         ]
     out += [
         "</style>",
-        f'<rect x=".5" y=".5" width="{W - 1}" height="{h - 1}" rx="10" fill="{BG}" stroke="{BORDER}"/>',
+        frame(W, h),
     ]
 
     # Header: the yearly total (streaks and the rest live in stats-card.svg).

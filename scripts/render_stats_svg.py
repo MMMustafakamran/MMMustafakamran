@@ -13,20 +13,17 @@ import re
 from datetime import date
 from pathlib import Path
 
+from theme import ACCENT, BORDER, FONT, MUTED, PALETTE, TILE, frame
+from theme import FG_BRIGHT as FG
+
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "data" / "contributions.json"
 OUT = ROOT / "stats-card.svg"
 PORTRAIT = ROOT / "ascii-portrait.svg"
 
 
-BG = "#0d1117"
-TILE = "#111821"
-BORDER = "#30363d"
-FG = "#e6edf3"
-MUTED = "#8b949e"
-ACCENT = "#39d353"
-BAR_FILL = "#26a641"
-BAR_TOP = "#69f0a0"
+BAR_FILL = PALETTE[3]
+BAR_TOP = PALETTE[5]
 
 PAD = 20
 GAP = 14
@@ -37,7 +34,6 @@ STAGGER = 0.12
 STATIC = os.environ.get("STATIC") == "1"
 
 MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
-FONT = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace"
 
 
 def size() -> tuple[float, float]:
@@ -97,7 +93,7 @@ def build(data: dict) -> str:
         ]
     out += [
         "</style>",
-        f'<rect x=".5" y=".5" width="{w - 1:g}" height="{h - 1:g}" rx="10" fill="{BG}" stroke="{BORDER}"/>',
+        frame(w, h),
     ]
 
     def delay(k: int) -> str:
