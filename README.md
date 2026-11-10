@@ -2,17 +2,17 @@
 
 <img src="./banner.svg" width="860" alt="Mustafa Kamran — Fullstack Developer · AI Engineer · Cloud Architect" />
 
+<p>
+<img src="./ascii-portrait.svg" width="49%" alt="ASCII portrait of Mustafa Kamran" />
+<img src="./stats-card.svg" width="49%" alt="GitHub contribution stats" />
+</p>
+
 <img src="./contrib-heatmap.svg" width="860" alt="Contribution heatmap for the last year" />
 
-<table>
-  <tr>
-    <td valign="top"><img src="./ascii-portrait.svg" width="430" alt="ASCII portrait of Mustafa Kamran" /></td>
-    <td valign="top"><img src="./stats-card.svg" width="430" alt="GitHub contribution stats" /></td>
-  </tr>
-</table>
-
-[![Portfolio](https://img.shields.io/badge/Portfolio-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://mustafakamran.vercel.app)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/mustafaKamran03)
-[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:mmmustafakamran@gmail.com)
+<p>
+<a href="https://mustafakamran.vercel.app"><img src="./links/portfolio.svg" height="32" alt="Portfolio" /></a>
+<a href="https://linkedin.com/in/mustafaKamran03"><img src="./links/linkedin.svg" height="32" alt="LinkedIn" /></a>
+<a href="mailto:mmmustafakamran@gmail.com"><img src="./links/email.svg" height="32" alt="Email" /></a>
+</p>
 
 </div>
