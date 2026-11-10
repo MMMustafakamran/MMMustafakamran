@@ -1,8 +1,10 @@
-"""Convert the prepped image into a monochrome ASCII-art SVG that "types" itself in,
+"""Convert the prepped image into a monochrome ASCII-art SVG that decodes itself in,
 then loops: blink, morph into the coding scene (coffee steam), and back.
 
-Each row is revealed by a left-to-right clip wipe with a block cursor riding the edge,
-staggered top to bottom. Plays once and freezes (SMIL, so GitHub's <img> renders it).
+On load the face's silhouette appears as flickering green noise, and each letter
+settles onto its real glyph at its own moment, so the face resolves out of the noise.
+Letters are sorted into DECODE_STEPS timing groups (scattered across the whole face) to
+keep the file small. SMIL only, so GitHub's <img> renders it.
 
 Usage: python scripts/make_ascii_svg.py            # writes ascii-portrait.svg
        STATIC=1 python scripts/make_ascii_svg.py   # frozen frame, no animation
@@ -39,9 +41,13 @@ BORDER = "#30363d"
 FG = "#c9d1d9"
 CURSOR = "#39d353"
 
-ROW_DELAY = 0.04  # seconds between row starts
-ROW_DUR = 0.35  # seconds for one row's wipe
-START = 0.2
+START = 0.2  # noise silhouette appears
+DECODE_LEAD = 0.35  # noise-only time before the first letters settle
+DECODE_DUR = 2.6  # seconds over which letters settle
+DECODE_STEPS = 16  # timing groups
+FLICKER = 0.09  # seconds per noise glyph swap
+NOISE = "#%&$?@*+=/<>"
+NOISE_FILL = "#39d353"
 
 # Boxes in source-image pixels (x0, y0, x1, y1), mapped onto the character grid.
 EYES = [(355, 430, 425, 480), (505, 425, 575, 478)]
@@ -308,57 +314,102 @@ def scene_fx(scene: list[str], scene_cell, art_y: float) -> list[str]:
     return out
 
 
+def sparse_rows(cells: list[tuple[int, int, str]], art_y: float, shaded: bool) -> str:
+    """Scattered letters as one <text> per row, each glyph placed by its own x."""
+    by_row: dict[int, list[tuple[int, str]]] = {}
+    for r, c, ch in cells:
+        by_row.setdefault(r, []).append((c, ch))
+    out = []
+    for r, items in sorted(by_row.items()):
+        items.sort()
+        xs = " ".join(f"{PAD + c * CHAR_W + 0.1:g}" for c, _ in items)
+        if shaded:
+            body, band_prev, run = [], None, ""
+            for _, ch in items:
+                band = min(RAMP.index(ch) * len(SHADES) // len(RAMP), len(SHADES) - 1) if ch in RAMP else len(SHADES) - 1
+                if run and band != band_prev:
+                    body.append(f'<tspan fill-opacity="{SHADES[band_prev]}">{esc(run)}</tspan>')
+                    run = ""
+                band_prev = band
+                run += ch
+            body.append(f'<tspan fill-opacity="{SHADES[band_prev]}">{esc(run)}</tspan>')
+            text = "".join(body)
+        else:
+            text = esc("".join(ch for _, ch in items))
+        out.append(f'<text x="{xs}" y="{art_y + r * LINE_H + LINE_H * 0.8:g}">{text}</text>')
+    return "".join(out)
+
+
+def decode_layers(lines: list[str], art_y: float, font: str) -> tuple[list[str], float]:
+    """The load-in: noise that resolves letter by letter. Returns (markup, end time)."""
+    rng = random.Random(11)
+    n_rows = len(lines)
+    groups: list[list[tuple[int, int, str]]] = [[] for _ in range(DECODE_STEPS)]
+    for r, line in enumerate(lines):
+        for c, ch in enumerate(line):
+            if ch == " ":
+                continue
+            # Mostly random, with a slight top-to-bottom drift so the eyes land early.
+            t = 0.75 * rng.random() + 0.25 * r / n_rows
+            groups[min(int(t * DECODE_STEPS), DECODE_STEPS - 1)].append((r, c, ch))
+    step = DECODE_DUR / DECODE_STEPS
+    t_first = START + DECODE_LEAD
+    done = t_first + DECODE_DUR
+    attrs = f'font-family="{font}" font-size="{FONT_SIZE}"'
+    out = []
+    for k, cells in enumerate(groups):
+        settle = t_first + (k + 1) * step
+        # Noise: two random glyph sets alternating, until this group settles.
+        frames = []
+        for f in range(2):
+            noise = [(r, c, rng.choice(NOISE)) for r, c, _ in cells]
+            frames.append(
+                f'<g opacity="{1 - f}"><animate attributeName="opacity" values="{1 - f};{f}" '
+                f'calcMode="discrete" dur="{2 * FLICKER:g}s" repeatCount="indefinite"/>'
+                f"{sparse_rows(noise, art_y, False)}</g>"
+            )
+        out.append(
+            f'<g {attrs} fill="{NOISE_FILL}" fill-opacity=".7" opacity="0">'
+            f'<set attributeName="opacity" to="1" begin="{START:g}s" end="{settle:.3f}s"/>'
+            f'{"".join(frames)}</g>'
+        )
+        # The real letters, from their settle time until the full face takes over.
+        out.append(
+            f'<g {attrs} fill="{FG}" opacity="0">'
+            f'<set attributeName="opacity" to="1" begin="{settle:.3f}s" end="{done:.3f}s"/>'
+            f"{sparse_rows(cells, art_y, True)}</g>"
+        )
+    return out, done
+
+
 def build(lines: list[str], to_cell) -> str:
     text_w = COLS * CHAR_W
     w = text_w + 2 * PAD
     art_y = PAD
     h = art_y + len(lines) * LINE_H + PAD
-    done = START + (len(lines) - 1) * ROW_DELAY + ROW_DUR  # when the portrait finishes
     font = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace"
+    decode, done = ([], 0.0) if STATIC else decode_layers(lines, art_y, font)
 
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:g}" height="{h:g}" viewBox="0 0 {w:g} {h:g}">',
         f'<rect x=".5" y=".5" width="{w - 1:g}" height="{h - 1:g}" rx="10" fill="{BG}" stroke="{BORDER}"/>',
     ]
 
-    if not STATIC:
-        out.append("<defs>")
-        for i in range(len(lines)):
-            y = art_y + i * LINE_H
-            begin = START + i * ROW_DELAY
-            out.append(
-                f'<clipPath id="r{i}"><rect x="{PAD}" y="{y:g}" width="0" height="{LINE_H:g}">'
-                f'<animate attributeName="width" from="0" to="{text_w:g}" begin="{begin:.3f}s" '
-                f'dur="{ROW_DUR}s" fill="freeze"/></rect></clipPath>'
-            )
-        out.append("</defs>")
+    out += decode
 
     # One loop: face hold, morph to the scene, scene hold, morph back.
     cycle = FACE_HOLD + 2 * MORPH_DUR + SCENE_HOLD
     out.append("<g>" if STATIC else group([(0, FACE_HOLD)], cycle, done, True))
-    out.append(f'<g font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}">')
+    # The whole face, shown once the decode has finished.
+    hold = "" if STATIC else f' opacity="0"><set attributeName="opacity" to="1" begin="{done:.3f}s"/'
+    out.append(f'<g font-family="{font}" font-size="{FONT_SIZE}" fill="{FG}"{hold}>')
     for i, line in enumerate(lines):
         baseline = art_y + i * LINE_H + LINE_H * 0.8
-        clip = "" if STATIC else f' clip-path="url(#r{i})"'
         out.append(
             f'<text x="{PAD}" y="{baseline:g}" textLength="{text_w:g}" '
-            f'lengthAdjust="spacingAndGlyphs"{clip}>{shade(line)}</text>'
+            f'lengthAdjust="spacingAndGlyphs">{shade(line)}</text>'
         )
     out.append("</g>")
-
-    if not STATIC:
-        # A block cursor rides each row's wipe edge, visible only while that row prints.
-        out.append(f'<g fill="{CURSOR}">')
-        for i in range(len(lines)):
-            y = art_y + i * LINE_H + 1
-            begin = START + i * ROW_DELAY
-            out.append(
-                f'<rect x="{PAD}" y="{y:g}" width="{CHAR_W:g}" height="{LINE_H - 2:g}" opacity="0">'
-                f'<set attributeName="opacity" to="1" begin="{begin:.3f}s" dur="{ROW_DUR}s"/>'
-                f'<animate attributeName="x" from="{PAD}" to="{PAD + text_w:g}" '
-                f'begin="{begin:.3f}s" dur="{ROW_DUR}s"/></rect>'
-            )
-        out.append("</g>")
 
     out += face_fx(lines, to_cell, art_y, done)
     out.append("</g>")  # end of the face group
